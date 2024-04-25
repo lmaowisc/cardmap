@@ -1,0 +1,1817 @@
+---
+title: "Cardiac T1 and T2 Mapping at 1.5T: Nomograms and Evaluation of Deep Learning Reconstruction"
+author: "Lu Mao"
+format: 
+  html:
+    toc: true
+    toc-depth: 5
+editor: visual
+execute: 
+  echo: false
+  warning: false
+  cache: false
+bibliography: references.bib
+---
+
+## Statistical analysis
+
+Age- and gender-specific upper and lower ranges within each slice were calculated as the mean plus and minus 2 standard deviations of the normal data, respectively. Differences by age, gender, and slice were assessed by three-way repeated measures ANOVA. Repeatability and reproducibility were assessed by the intra-class correlation coefficient (ICC) [@fleiss1971], repeatability/reproducibiliy coefficient, and Bland-Altman analysis. P-values \< 0.05 were considered statistically significant. All analyses were performed in R version 4.3.2 (R Foundation for Statistical Computing, Vienna, Austria).
+
+```{r}
+#| label: dat-read
+ptrans <- function(pval, withp=FALSE){
+  
+  if (withp){
+    if(pval>=0.001){
+      pval.text <- paste0("p=",round(pval,3))
+    }else{
+      pval.text <- "p<0.001"
+    }
+    return(pval.text)
+  }else{
+    if(pval>=0.001){
+      pval.text <- paste0(round(pval,3))
+    }else{
+      pval.text <- "<0.001"
+    }
+    return(pval.text)
+  }
+}
+
+pval_star <- function(pval){
+  
+  stars <- ifelse(pval<0.05&pval>=0.01,"*",ifelse(pval<0.01&pval>=0.001,"**",ifelse(pval<0.001,"***","")))
+  
+  return(stars)
+}
+
+
+
+
+library(patchwork)
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(lme4)
+library(lmerTest)
+library(irr)
+
+### t 
+
+
+# test p-value
+
+# y <- T1_long$value
+# trt <- T1_long$gender
+# id <- T1_long$id
+
+t_test_p <- function(y, trt, id){
+  test <- summary(aov(y ~ trt + Error(id)))
+  
+  test[[2]][[1]]$"Pr(>F)"[1]
+}
+
+
+
+## compute ICC and RC and bias
+
+# y1 <- T1intra$A
+# y2 <- T1intra$B
+
+icc_rc <- function(y1, y2, r = 3, r1 = 1){
+  obj <- icc(cbind(y1, y2))
+  
+  icc <- str_c(round(obj$value, r), " (",
+               round(obj$lbound, r), ", ",
+               round(obj$ubound, r), ")")
+  icc_p <- ptrans(obj$p.value, withp = TRUE)
+  
+  diff <- y1 - y2
+  
+  bias <- round(mean(diff, na.rm = TRUE), r1)
+  RC <- round(1.96 * sd(diff, na.rm = TRUE), r1)
+  
+  str_c(bias, "|", RC, "|", icc, "|", icc_p)
+  
+}
+
+
+# read demographic data
+demo <- read_excel("data//Cardmap_demographics_short.xlsx") |> 
+  janitor::clean_names() |> 
+  mutate(
+    id = parse_number(subj_number),
+    .before = 1
+  ) |> 
+  select(
+    !subj_number
+  )
+
+# T1 main
+T1dat <- read_excel("data//T1_results_20240317_short.xlsx", 
+                    na = "d") |>  
+  janitor::clean_names() |> 
+  rename(
+    id = card_map
+  )
+
+
+
+# T2 main
+T2dat <- read_excel("data//T2_results_20240317_short.xlsx", 
+                    na = c("d", "nan")) |>  
+  janitor::clean_names() |> 
+  rename(
+    id = card_map
+  )
+
+
+```
+
+## Subject characteristics
+
+```{r}
+#| label: tbl-demo
+#| tbl-cap: Patient age distribution by gender.
+
+# quantitative age
+age <- 
+  demo |> 
+  group_by(gender) |> 
+  summarize(
+    med_iqr = str_c(quantile(age)[3], " (", quantile(age)[2], ", ", quantile(age)[4], ")")
+  ) |> 
+  pivot_wider(
+    values_from = med_iqr,
+    names_from = gender
+  ) |> 
+  mutate(
+    " " = "Age (years)",
+    "  " = "median (IQR)",
+    .before = 1
+  )
+ 
+# age group
+
+age_c <- demo |> 
+  group_by(gender, age_group) |> 
+  summarize(
+    n = n()
+  )
+ 
+
+age_cat <- age_c |> left_join(
+  age_c |> group_by(gender) |> summarize(N = sum(n))
+) |> 
+  mutate(
+    N_pct = str_c(n, " (", round(100 * n / N, 1), "%)")
+  ) |> 
+  pivot_wider(
+    id_cols = age_group,
+    values_from = N_pct,
+    names_from = gender
+  ) |> 
+  mutate(
+    " " = "",
+    .before = 1
+  ) |> 
+  rename(
+    "  " = age_group
+  )
+
+
+age_stats <- age |> add_row(age_cat)
+
+gender_n <- demo |> count(gender) |> pull(n)
+
+colnames(age_stats)[3:4] <- str_c(colnames(age_stats)[3:4], " (N=",
+                                  gender_n, ")")
+
+kable(age_stats)
+```
+
+## Age- and gender-specific reference ranges
+
+-   **Slice 1**: AHA1 -- AHA6, Sept1
+-   **Slice 2**: AHA7 -- AHA12, Sept2
+-   **Slice 3**: AHA13 -- AHA16, Sept3
+
+```{r}
+
+# merge demo data to T1 and take recon==DL
+
+T1tmp <- demo |> 
+  left_join(T1dat |> filter(recon == "DL"), join_by(id))
+
+
+# colnames(T1tmp)
+
+T1_long <- T1tmp |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, map, name, slice, value) 
+
+# View(T1_long)
+
+za <- qnorm(0.975)
+
+# gender-------------------------------------------
+T1_gender <- T1_long |> 
+  group_by(gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+  range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = gender
+  )
+
+T1_gender_p <- T1_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, gender, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T1 reference ranges
+T1_gender_tab <- 
+  T1_gender |> 
+  left_join(
+    T1_gender_p
+  )
+
+
+# age group-------------------------------------------
+T1_age <- T1_long |> 
+  group_by(age_group, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+  range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_group
+  )
+
+
+
+
+T1_age_p <- T1_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, age_group, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T1 reference ranges
+T1_age_tab <- 
+  T1_age |> 
+  left_join(
+    T1_age_p
+  )
+
+
+# View(T1_age_tab)
+
+
+# merge demo data to T2 and take recon==DL ----------
+
+T2tmp <- demo |> 
+  left_join(T2dat |> filter(recon == "DL"), join_by(id))
+
+
+# colnames(T1tmp)
+
+T2_long <- T2tmp |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, map, name, slice, value) |> 
+  filter(
+    !is.na(map)
+  )
+
+# View(T2_long)
+
+za <- qnorm(0.975)
+
+# gender-------------------------------------------
+T2_gender <- T2_long |> 
+  group_by(gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+   range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = gender
+  )
+
+# View(T2_gender)
+
+# T2_gender |> 
+  # filter(is.na(map))
+
+T2_gender_p <- T2_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, gender, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T2 reference ranges
+T2_gender_tab <- 
+  T2_gender |> 
+  left_join(
+    T2_gender_p
+  )
+
+
+# age group-------------------------------------------
+
+
+T2_age <- T2_long |> 
+  group_by(age_group, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_group
+  )
+
+T2_age_p <- T2_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, age_group, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T2 reference ranges
+T2_age_tab <- 
+  T2_age |> 
+  left_join(
+    T2_age_p
+  )
+
+
+```
+
+### T1 measurements
+
+The gender- and age-specific mean values and 95% ranges are summarized for each segment for MOLLI and SMART in @tbl-ref-t1-gender and @tbl-ref-t1-age.
+
+
+
+```{r}
+#| label: tbl-ref-t1-gender
+#| tbl-cap: Gender-specific mean (+- 2SD) for T1.
+T1_gender_tab |> 
+  kable(align = "c")
+```
+
+```{r}
+#| label: tbl-ref-t1-age
+#| tbl-cap: Age--specific mean (+- 2SD) for T1.
+T1_age_tab |> 
+  kable(align = "c")
+```
+
+
+```{r}
+#| label: fig-ref-t1-molli
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T1-MOLLI.
+#| fig-width: 8
+#| fig-height: 8
+
+# T1_sum |> 
+#   filter(map == "MOLLI") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+
+```{r}
+#| label: fig-ref-t1-smart
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T1-SMART.
+#| fig-width: 8
+#| fig-height: 8
+
+# T1_sum |> 
+#   filter(map == "SMART") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+Three-way ANOVA test (@tbl-anova-t1) confirms that gender and slice differences are significant, and that age difference is not.
+
+```{r}
+#| label: tbl-anova-t1
+#| tbl-cap: P-values from three-way ANOVA test on age, gender, and slice differences.
+
+# ?lmer
+obj_molly <- lmer(value ~ age_group + gender + slice + (1|id), data = T1_long |> filter(map == "MOLLI"))
+obj_smart<- lmer(value ~ age_group + gender + slice + (1|id), data = T1_long |> filter(map == "SMART"))
+
+
+anova_tab <- rbind(anova(obj_molly)[, 6],
+                   anova(obj_smart)[, 6])
+
+anova_tab_fmt <- matrix(NA, 2, 3)
+
+
+for (j in 1:3){
+  anova_tab_fmt[1, j] <- ptrans(anova_tab[1, j])
+  anova_tab_fmt[2, j] <- ptrans(anova_tab[2, j])
+}
+
+colnames(anova_tab_fmt) <- c("Age", "Gender", "Slice")
+rownames(anova_tab_fmt) <- c("MOLLI", "SMART")
+
+
+kable(anova_tab_fmt, align = "c")
+```
+
+
+
+```{r}
+#| label: tbl-anova-t1-wi-slice
+#| tbl-cap: P-values for between-segment differences within each slice adjusting for age and gender for T1.
+
+# test of segments within slice
+# k <- 1
+# df <- T1_long 
+
+test_within_slice <- function(df, k){
+
+  obj <- lmer(value ~ age_group + gender + name + (1|id), data = df |> filter(slice == str_c("Slice ", k)))
+  
+  pval <- ptrans(anova(obj)[3, 6])
+  
+  return(pval)
+}
+
+
+t1_within_slice_tab <- tibble(
+  " " = c("MOLLI", "SMART"),
+  "Slice 1" = c(test_within_slice(T1_long |> filter(map == "MOLLI"), 1),
+                test_within_slice(T1_long |> filter(map == "SMART"), 1)),
+  "Slice 2" = c(test_within_slice(T1_long |> filter(map == "MOLLI"), 2),
+                test_within_slice(T1_long |> filter(map == "SMART"), 2)),
+  "Slice 3" = c(test_within_slice(T1_long |> filter(map == "MOLLI"), 3),
+                test_within_slice(T1_long |> filter(map == "SMART"), 3))
+)
+
+kable(t1_within_slice_tab, align = "c")
+
+```
+
+### T2 measurements
+
+The gender- and age-specific mean values and 95% ranges are summarized for each segment for T2 and T2-fast in @tbl-ref-t2-gender and @tbl-ref-t2-age.
+
+```{r}
+#| label: tbl-ref-t2-gender
+#| tbl-cap: Gender-specific mean (+- 2SD) for T2.
+T2_gender_tab |> 
+  kable(align = "c")
+```
+
+```{r}
+#| label: fig-ref-t2-t2
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T2.
+#| fig-width: 8
+#| fig-height: 8
+
+# T2_sum |> 
+#   filter(map == "T2") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+```{r}
+#| label: tbl-ref-t2-age
+#| tbl-cap: Age-specific mean (+- 2SD) for T2.
+T2_age_tab |> 
+  kable(align = "c")
+```
+
+```{r}
+#| label: fig-ref-t2-fast
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T2-fast.
+#| fig-width: 8
+#| fig-height: 8
+
+# T2_sum |> 
+#   filter(map == "T2fast") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+Three-way ANOVA test (@tbl-anova-t2) shows that age, gender and slice all have significant effects.
+
+```{r}
+#| label: tbl-anova-t2
+#| tbl-cap: P-values from three-way ANOVA test on age, gender, and slice differences.
+
+# ?lmer
+obj_t2 <- lmer(value ~ age_group + gender + slice + (1|id), data = T2_long |> filter(map == "T2"))
+obj_fast<- lmer(value ~ age_group + gender + slice + (1|id), data = T2_long |> filter(map == "T2fast"))
+
+
+anova_tab <- rbind(anova(obj_t2)[, 6],
+                   anova(obj_fast)[, 6])
+
+anova_tab_fmt <- matrix(NA, 2, 3)
+
+
+for (j in 1:3){
+  anova_tab_fmt[1, j] <- ptrans(anova_tab[1, j])
+  anova_tab_fmt[2, j] <- ptrans(anova_tab[2, j])
+}
+
+colnames(anova_tab_fmt) <- c("Age", "Gender", "Slice")
+rownames(anova_tab_fmt) <- c("T2", "T2-fast")
+
+
+kable(anova_tab_fmt, align = "c")
+```
+
+```{r}
+#| label: tbl-anova-t2-wi-slice
+#| tbl-cap: P-values for between-segment differences within each slice adjusting for age and gender for T2.
+
+# test of segments within slice
+# k <- 1
+# df <- T1_long 
+
+
+
+t2_within_slice_tab <- tibble(
+  " " = c("T2", "T2fast"),
+  "Slice 1" = c(test_within_slice(T2_long |> filter(map == "T2"), 1),
+                test_within_slice(T2_long |> filter(map == "T2fast"), 1)),
+  "Slice 2" = c(test_within_slice(T2_long |> filter(map == "T2"), 2),
+                test_within_slice(T2_long |> filter(map == "T2fast"), 2)),
+  "Slice 3" = c(test_within_slice(T2_long |> filter(map == "T2"), 3),
+                test_within_slice(T2_long |> filter(map == "T2fast"), 3))
+)
+
+kable(t2_within_slice_tab, align = "c")
+```
+
+
+
+### Area of septal contours
+
+The mean and standard deviation (SD) of septal contour area by age and gender for T1 and T2 are summarized in @tbl-sept-area-t1 and @tbl-sept-area-t2, respectively. In general, sept1 \> sept2 \> sept3.
+
+```{r}
+#| label: tbl-sept-area-t1
+#| tbl-cap: Mean (+- 2SD) of septal contour area for T1.
+
+
+T1_sept <- T1tmp |> 
+  pivot_longer(
+    c(sept_1_area, sept_2_area, sept_3_area),
+    values_to = "value",
+    names_to = "sept"
+  ) |> 
+  select(
+    id, gender, map, sept, value
+  )
+
+## summary table for T1
+
+T1_sept |> 
+  group_by(
+      gender, map,   sept
+  ) |> 
+  summarize(
+    stats = str_c(round(mean(value, na.rm = TRUE), 1), " \u00B1 ",
+                  round(2 * sd(value, na.rm = TRUE), 1))
+  ) |> 
+  pivot_wider(
+    values_from = stats,
+    names_from = gender
+  ) |> 
+  rename(
+    Map = map,
+    Sept = sept
+  ) |> 
+  kable(
+    align = "c"
+  )
+```
+
+```{r}
+#| label: tbl-sept-area-t2
+#| tbl-cap: Mean (+- 2SD) of septal contour area for T2.
+
+T2_sept <- T2tmp |> 
+  pivot_longer(
+    c(sept_1_area, sept_2_area, sept_3_area),
+    values_to = "value",
+    names_to = "sept"
+  ) |> 
+  select(
+    id, gender, map, sept, value
+  ) |> 
+  filter(
+    !is.na(map)
+  )
+
+## summary table for T2
+
+T2_sept |> 
+  group_by(
+    gender, map,   sept
+  ) |> 
+  summarize(
+    stats = str_c(round(mean(value, na.rm = TRUE), 1), " \u00B1 ",
+                  round(2 * sd(value, na.rm = TRUE), 1))
+  ) |> 
+  pivot_wider(
+    values_from = stats,
+    names_from = gender
+  ) |> 
+  rename(
+    Map = map,
+    Sept = sept
+  ) |> 
+  kable(
+    align = "c"
+  )
+  
+```
+
+## Repeatability and Reproducibility
+
+### Repeatability for DL reconstructions
+
+<!-- use “intra-system” subjects for repeatability of sequence at same MR system for DL reconstructions for T1 Molli, T1 Smart1, T2, T2 fast (each n=15) -->
+
+```{r}
+
+T1intra <- T1tmp |> 
+  filter(
+    repeatability == "intra-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  )
+# T1intra
+#      id age_group gender map   name  slice       A     B
+#    <dbl> <chr>     <chr>  <chr> <fct> <chr>   <dbl> <dbl>
+#  1     1 30-39     Female MOLLI aha1  Slice 1  914.  907.
+#  2     1 30-39     Female MOLLI aha2  Slice 1  956.  944.
+#  3     1 30-39     Female MOLLI aha3  Slice 1  964.  941.
+#  4     1 30-39     Female MOLLI aha4  Slice 1 1009. 1083.
+
+# repeatability for T1
+
+
+
+# ?icc
+T2intra <- T2tmp |> 
+  filter(
+    repeatability == "intra-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  )
+
+# View(T2intra)
+
+###   T1 ----------------------------------------------------------------------
+T1icc <- T1intra |> 
+  group_by(
+    map
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+# BA plot for T1
+BAT1 <- T1intra |> 
+  mutate(
+    x = (A + B) / 2,
+    y = (A - B)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = T1icc, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = T1icc, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = T1icc, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = T1icc, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference", limits = c(-200, 200)) +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ map, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+
+###   T2 ----------------------------------------------------------------------
+T2icc <- T2intra |> 
+  group_by(
+    map
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+# BA plot for T2
+BAT2 <- T2intra |> 
+  mutate(
+    x = (A + B) / 2,
+    y = (A - B)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = T2icc, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = T2icc, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = T2icc, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = T2icc, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference", limits = c(-12, 12)) +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ map, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+
+```
+
+The bias, repeatability coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in @tbl-icc-repeat. Bland-Altman plots are shown in @fig-BA-repeat.
+
+```{r}
+#| label: tbl-icc-repeat
+#| tbl-cap: Repeatability analysis of T1 and T2.
+
+T1icc |> 
+  add_row(T2icc) |> 
+  kable(align = "c")
+
+
+```
+
+```{r}
+#| label: fig-BA-repeat
+#| fig-cap: Bland-Altman analysis of repeatability for T1 and T2
+#| fig-width: 8
+#| fig-height: 8
+
+BAT1 / BAT2 + plot_layout(guides = "collect") & theme(legend.position = "top")
+```
+
+### Between-system reproducibility
+
+```{r}
+
+# T1tmp |> 
+#   filter(
+#     repeatability == "intra-system"
+#   ) |> View()
+
+# T1tmp |> 
+#   filter(
+#     repeatability == "inter-system"
+#   ) |> View()
+
+T1inter <- T1tmp |> 
+  filter(
+    repeatability == "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  )
+# T1inter
+#      id age_group gender map   name  slice       A     B
+#    <dbl> <chr>     <chr>  <chr> <fct> <chr>   <dbl> <dbl>
+#  1     1 30-39     Female MOLLI aha1  Slice 1  914.  907.
+#  2     1 30-39     Female MOLLI aha2  Slice 1  956.  944.
+#  3     1 30-39     Female MOLLI aha3  Slice 1  964.  941.
+#  4     1 30-39     Female MOLLI aha4  Slice 1 1009. 1083.
+
+# repeatability for T1
+
+
+
+# ?icc
+T2inter <- T2tmp |> 
+  filter(
+    repeatability == "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  )
+
+# View(T2inter)
+
+###   T1 ----------------------------------------------------------------------
+T1icc_inter <- T1inter |> 
+  group_by(
+    map
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+# BA plot for T1
+BAT1inter <- T1inter |> 
+  mutate(
+    x = (A + B) / 2,
+    y = (A - B)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = T1icc_inter, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = T1icc_inter, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = T1icc_inter, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = T1icc_inter, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference", limits = c(-200, 200)) +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ map, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+
+###   T2 ----------------------------------------------------------------------
+T2icc_inter <- T2inter |> 
+  group_by(
+    map
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+# BA plot for T2
+BAT2inter <- T2inter |> 
+  mutate(
+    x = (A + B) / 2,
+    y = (A - B)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = T2icc_inter, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = T2icc_inter, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = T2icc_inter, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = T2icc_inter, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference", limits = c(-14, 14)) +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ map, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+```
+
+The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in @tbl-icc-rep-inter-sys. Bland-Altman plots are shown in @fig-BA-rep-inter-sys.
+
+```{r}
+#| label: tbl-icc-rep-inter-sys
+#| tbl-cap:  Between-system reproducibility analysis of T1 and T2.
+
+T1icc_inter |> 
+  add_row(T2icc_inter) |> 
+  kable(align = "c")
+
+
+```
+
+```{r}
+#| label: fig-BA-rep-inter-sys
+#| fig-cap: Bland-Altman analysis of between-system reproducibility for T1 and T2
+#| fig-width: 8
+#| fig-height: 8
+
+BAT1inter / BAT2inter + plot_layout(guides = "collect") & theme(legend.position = "top")
+```
+
+### Between-sequence reproducibility
+
+<!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-sequence reproducibility 1) MOLLI DL vs SMART1 DL, 2) T2 DL vs T2fast DL. (If data from scan A is not available for intra-system subjects, feel free to use scan B data.) -->
+
+```{r}
+
+# prepare data for T1
+
+T1_non_inter <- T1tmp |> 
+  filter(
+    repeatability != "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(A, B)
+  ) 
+
+T1_inter <- T1inter |> 
+  mutate(
+    value = coalesce(B, A)
+  ) 
+
+# T1 combine 
+T1seq <- T1_non_inter |> 
+  add_row(T1_inter) |> 
+  pivot_wider(
+    id_cols = c(id, name, slice),
+    values_from = value,
+    names_from = map
+  ) |> 
+  mutate(
+    seq = "MOLLI vs SMART",
+    .after = 1
+  ) |> 
+  rename(
+    A = MOLLI,
+    B = SMART
+  )
+  
+
+# prepare data for T2
+
+# View(T2tmp)
+
+T2_non_inter <- T2tmp |> 
+  filter(
+    repeatability != "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, map, name, slice, value) |> 
+  group_by(
+    id, age_group, gender, scan,  map,  name
+  ) |> 
+  slice_head() |> ungroup() |> filter(!is.na(scan)) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(A, B)
+  ) 
+
+T2_inter <- T2inter |> 
+  mutate(
+    value = coalesce(B, A)
+  ) 
+
+# T1 combine 
+T2seq <- T2_non_inter |> 
+  add_row(T2_inter) |> 
+  pivot_wider(
+    id_cols = c(id, name, slice),
+    values_from = value,
+    names_from = map
+  ) |> 
+  mutate(
+    seq = "T2 vs T2-fast",
+    .after = 1
+  ) |> 
+  rename(
+    A = T2,
+    B = T2fast
+  )
+
+
+# combine T1 and T2
+allseq <- T1seq |> add_row(T2seq)  
+
+
+###   T1 and T2 ----------------------------------------------------------------------
+allseq_icc <- allseq |> 
+  group_by(
+    seq
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+# BA plot for T1
+BATseq <- allseq |> 
+  mutate(
+    x = (A + B) / 2,
+    y = (A - B)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = allseq_icc, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = allseq_icc, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = allseq_icc, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = allseq_icc, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference") +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ seq, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+
+```
+
+The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI vs SMART and T2 vs T2fast are tabulated in @tbl-icc-rep-seq. Bland-Altman plots are shown in @fig-BA-rep-seq. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) Bias for MOLLI vs SMART is substantial: SMART values are bigger, causing lack of agreement.
+
+```{r}
+#| label: tbl-icc-rep-seq
+#| tbl-cap:  Between-sequence reproducibility analysis of T1 and T2.
+
+allseq_icc |> 
+  rename(" " =  seq) |> 
+  kable(align = "c")
+
+
+```
+
+```{r}
+#| label: fig-BA-rep-seq
+#| fig-cap: Bland-Altman analysis of between-sequence reproducibility for T1 and T2
+#| fig-width: 8
+#| fig-height: 4.2
+
+BATseq + theme(legend.position = "top")
+```
+
+### Between-recon reproducibility
+
+<!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-recon reproducibility 1) MOLLI Std vs MOLLI DL, 2) T2 Std vs T2 DL, 3) T2 DL vs T2 GE.  -->
+
+```{r}
+
+# T1-molli -----------------------------------------
+molli <- demo |> 
+  left_join(T1dat |> filter(map == "MOLLI"), join_by(id))
+
+molli_non_inter <- molli |> 
+  filter(
+    repeatability != "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, recon, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(A, B)
+  ) 
+
+molli_inter <- molli |> 
+  filter(
+    repeatability == "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, recon, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(B, A)
+  ) 
+
+
+
+# T1 combine 
+molli_all <- molli_non_inter |> 
+  add_row(molli_inter) |> 
+  filter(recon %in% c("Std", "DL")) |> 
+  pivot_wider(
+    id_cols = c(id, name, slice),
+    values_from = value,
+    names_from = recon
+  ) |> 
+  mutate(
+    recon = "MOLLI: Std vs DL",
+    .after = 1
+  ) |> 
+  rename(
+    A = Std,
+    B = DL
+  )
+  
+
+# T2 --------------------------------
+
+t2 <- demo |> 
+  left_join(T2dat |> filter(map == "T2"), join_by(id))
+
+t2_non_inter <- t2 |> 
+  filter(
+    repeatability != "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, recon, name, slice, value) |> 
+  group_by(
+    id, age_group, gender, scan,  recon,  name
+  ) |> 
+  slice_head() |> ungroup() |> filter(!is.na(scan)) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(A, B)
+  ) 
+
+t2_inter <- t2 |> 
+  filter(
+    repeatability == "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, recon, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(B, A)
+  ) 
+
+
+
+# T2 combine 
+t2_all <- t2_non_inter |> 
+  add_row(t2_inter) 
+
+## t2: std vs DL
+t2_std_dl <- t2_all |> 
+  filter(recon %in% c("Std", "DL")) |> 
+  pivot_wider(
+    id_cols = c(id, name, slice),
+    values_from = value,
+    names_from = recon
+  ) |> 
+  mutate(
+    recon = "T2: Std vs DL",
+    .after = 1
+  ) |> 
+  rename(
+    A = Std,
+    B = DL
+  )
+  
+
+## t2: DL vs GE
+t2_dl_ge <- t2_all |> 
+  filter(recon %in% c("DL", "GE")) |> 
+  pivot_wider(
+    id_cols = c(id, name, slice),
+    values_from = value,
+    names_from = recon
+  ) |> 
+  mutate(
+    recon = "T2: DL vs GE",
+    .after = 1
+  ) |> 
+  rename(
+    A = DL,
+    B = GE
+  )
+
+# View(t2_dl_ge)
+
+recon_all <- molli_all |> 
+  add_row(t2_std_dl) |> 
+  add_row(t2_dl_ge) |> 
+  mutate(
+    recon = fct(recon)
+  )
+
+
+
+allrecon_icc <- recon_all |> 
+  group_by(
+    recon
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+
+
+# BA plot for recon
+BATrecon <- recon_all |> 
+  mutate(
+    x = (A + B) / 2,
+    y = (A - B)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = allrecon_icc, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = allrecon_icc, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = allrecon_icc, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = allrecon_icc, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference") +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ recon, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+```
+
+The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI: Std vs DL, T2: Std vs DL, and T2: DL vs GE are tabulated in @tbl-icc-rep-recon. Bland-Altman plots are shown in @fig-BA-rep-recon. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) There is strong agreement within the three pairs of comparisons.
+
+```{r}
+#| label: tbl-icc-rep-recon
+#| tbl-cap:  Between-recon reproducibility analysis of T1 and T2.
+
+allrecon_icc  |> 
+  rename(" " =  recon) |> 
+  kable(align = "c")
+
+
+```
+
+```{r}
+#| label: fig-BA-rep-recon
+#| fig-cap: Bland-Altman analysis of between-recon reproducibility for T1 and T2
+#| fig-width: 8
+#| fig-height: 3.5
+
+BATrecon + theme(legend.position = "top")
+```
+
+### Between-reader reproducibility
+
+<!-- for between-reader reproducibility, use subjects from the two “interreader” tables and compare them to the ones in the main tables. Use MOLLI DL and T2 DL data only. Readers were “RVS” and “AF”. -->
+
+```{r}
+## read in reader data
+## T1 -------------------------------------------------------------------
+T1reader <- read_excel("data//T1_results_interreader_20240317_short.xlsx",
+                       na = c("d", "nan")) |>  
+  janitor::clean_names() |> 
+  rename(
+    id = card_map
+  )
+
+# str(T1reader)
+# str(T1dat)
+
+T1readstmp <- T1dat |> filter(map == "MOLLI", recon == "DL") |> 
+  add_row(T1reader)
+  
+T1reads_df <- demo |> 
+  left_join(T1readstmp, join_by(id))  
+
+
+T1reads_non_inter <- T1reads_df |> 
+  filter(
+    repeatability != "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, reader, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(A, B)
+  ) |> 
+  select(
+    !c(A, B)
+  ) |> 
+  pivot_wider(
+    values_from = value,
+    names_from = reader
+  ) |> 
+  filter(
+    !is.na(AF) & !is.na(RVS)
+  )
+
+
+T1reads_inter <- T1reads_df |> 
+  filter(
+    repeatability == "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, reader, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(B, A)
+  ) |> 
+  select(
+    !c(A, B)
+  ) |> 
+  pivot_wider(
+    values_from = value,
+    names_from = reader
+  ) |> 
+  filter(
+    !is.na(AF) & !is.na(RVS)
+  )
+
+T1reads <- T1reads_non_inter |> 
+  add_row(
+    T1reads_inter
+  ) 
+  
+  
+## read in reader data
+## T2 -------------------------------------------------------------------
+T2reader <- read_excel("data//T2_results_interreader_20240317_short.xlsx",
+                       na = c("d", "nan")) |>  
+  janitor::clean_names() |> 
+  rename(
+    id = card_map
+  )
+
+# str(T2reader)
+# str(T2dat)
+
+T2readstmp <- T2dat |> filter(map == "T2", recon == "DL") |> 
+  add_row(T2reader)
+  
+T2reads_df <- demo |> 
+  left_join(T2readstmp, join_by(id))  
+
+
+T2reads_non_inter <- T2reads_df |> 
+  filter(
+    repeatability != "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, reader, map, name, slice, value) |> 
+  group_by(
+    id, age_group, gender, scan,  reader, map,   name
+  ) |> 
+  slice_head() |> ungroup() |> filter(!is.na(scan)) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(A, B)
+  ) |> 
+  select(
+    !c(A, B)
+  ) |> 
+  pivot_wider(
+    values_from = value,
+    names_from = reader
+  ) |> 
+  filter(
+    !is.na(AF) & !is.na(RVS)
+  )
+
+
+T2reads_inter <- T2reads_df |> 
+  filter(
+    repeatability == "inter-system"
+  ) |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, scan, reader, map, name, slice, value) |> 
+  pivot_wider(
+    names_from = scan,
+    values_from = value
+  ) |> 
+  mutate(
+    value = coalesce(B, A)
+  ) |> 
+  select(
+    !c(A, B)
+  ) |> 
+  pivot_wider(
+    values_from = value,
+    names_from = reader
+  ) |> 
+  filter(
+    !is.na(AF) & !is.na(RVS)
+  )
+
+T2reads <- T2reads_non_inter |> 
+  add_row(
+    T2reads_inter
+  ) 
+
+## combine MOLLI and T2
+all_reads <- T1reads |> 
+  add_row(
+    T2reads
+  )
+
+all_reads_icc <- all_reads |> 
+  group_by(
+    map
+  ) |> 
+  summarize(
+    results = icc_rc(RVS, AF)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
+
+
+# BA plot for recon
+BATreads <- all_reads |> 
+  mutate(
+    x = (RVS + AF) / 2,
+    y = (RVS - AF)
+  ) |> 
+  ggplot(aes(x= x, y = y)) +
+  geom_point(aes(color = slice), size = 2) +
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_hline(data = all_reads_icc, aes(yintercept = Bias), linetype = 1, color = "gray40") +
+  geom_hline(data = all_reads_icc, aes(yintercept = Bias + RC), linetype = 2) +
+  geom_hline(data = all_reads_icc, aes(yintercept = Bias - RC), linetype = 2) +
+  geom_text(data = all_reads_icc, x = -Inf, y = Inf, 
+            aes(label = str_c("Bias (95% CI): ", Bias, " (", 
+                              Bias - RC, ", ", Bias + RC, ")")), hjust =     0, vjust = 1) + 
+  scale_y_continuous("Difference") +
+  scale_x_continuous("Mean") + 
+  facet_wrap(~ map, scales = "free") +
+  theme_bw() +
+  theme(
+    legend.title = element_blank()
+  )
+
+
+```
+
+The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing RVS vs AF for MOLLI and T2 are tabulated in @tbl-icc-rep-reads. Bland-Altman plots are shown in @fig-BA-rep-reads. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) The inter-reader agreement is strong.
+
+```{r}
+#| label: tbl-icc-rep-reads
+#| tbl-cap:  Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.
+
+all_reads_icc  |> 
+  rename(" " =  map) |> 
+  kable(align = "c")
+
+
+```
+
+```{r}
+#| label: fig-BA-rep-reads
+#| fig-cap: Bland-Altman analysis of between-reader (RVS vs AF) reproducibility for MOLLI and T2
+#| fig-width: 8
+#| fig-height: 4.2
+
+BATreads+ theme(legend.position = "top")
+```
