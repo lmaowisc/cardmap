@@ -399,8 +399,6 @@ T2_age_tab <-
 
 The gender- and age-specific mean values and 95% ranges are summarized for each segment for MOLLI and SMART in @tbl-ref-t1-gender and @tbl-ref-t1-age.
 
-
-
 ```{r}
 #| label: tbl-ref-t1-gender
 #| tbl-cap: Gender-specific mean (+- 2SD) for T1.
@@ -414,7 +412,6 @@ T1_gender_tab |>
 T1_age_tab |> 
   kable(align = "c")
 ```
-
 
 ```{r}
 #| label: fig-ref-t1-molli
@@ -442,7 +439,6 @@ T1_age_tab |>
 #   )
 
 ```
-
 
 ```{r}
 #| label: fig-ref-t1-smart
@@ -499,8 +495,6 @@ rownames(anova_tab_fmt) <- c("MOLLI", "SMART")
 
 kable(anova_tab_fmt, align = "c")
 ```
-
-
 
 ```{r}
 #| label: tbl-anova-t1-wi-slice
@@ -657,8 +651,6 @@ t2_within_slice_tab <- tibble(
 
 kable(t2_within_slice_tab, align = "c")
 ```
-
-
 
 ### Area of septal contours
 
