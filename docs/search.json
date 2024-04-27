@@ -4,7 +4,7 @@
     "href": "stats.html",
     "title": "Statistical analysis",
     "section": "",
-    "text": "Age- and gender-specific upper and lower ranges within each slice were calculated as the mean plus and minus 2 standard deviations of the normal data, respectively. Differences by age, gender, and slice were assessed by three-way repeated measures ANOVA. Repeatability and reproducibility were assessed by the intra-class correlation coefficient (ICC) (Fleiss 1971), repeatability/reproducibiliy coefficient, and Bland-Altman analysis. P-values &lt; 0.05 were considered statistically significant. All analyses were performed in R version 4.3.2 (R Foundation for Statistical Computing, Vienna, Austria).\n\n\n\n\nReferences\n\nFleiss, Joseph L. 1971. “Measuring Nominal Scale Agreement Among Many Raters.” Psychological Bulletin 76 (5): 378–82. https://doi.org/10.1037/h0031619."
+    "text": "Age- and gender-specific upper and lower ranges within each segment were calculated as the mean plus and minus 2 standard deviations of the normal data, respectively. Differences by age, gender, and slice were assessed by three-way repeated measures ANOVA. Repeatability and reproducibility were assessed by the intra-class correlation coefficient (ICC) (Fleiss 1971), repeatability/reproducibiliy coefficient, and Bland-Altman analysis. P-values &lt; 0.05 were considered statistically significant. All analyses were performed in R version 4.3.2 (R Foundation for Statistical Computing, Vienna, Austria).\n\n\n\n\nReferences\n\nFleiss, Joseph L. 1971. “Measuring Nominal Scale Agreement Among Many Raters.” Psychological Bulletin 76 (5): 378–82. https://doi.org/10.1037/h0031619."
   },
   {
     "objectID": "cardmap.html",
