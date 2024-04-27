@@ -8,8 +8,9 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - about.qmd
-
+      - stats.qmd
+      - aim1.qmd
+      - aim2.qmd
 format:
   html:
     theme: cosmo

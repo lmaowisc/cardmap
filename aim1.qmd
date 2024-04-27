@@ -1,0 +1,834 @@
+---
+title: "Aim 1 Results"
+execute: 
+  echo: false
+  warning: false
+  cache: false
+bibliography: references.bib
+---
+
+
+```{r}
+#| label: dat-read
+ptrans <- function(pval, withp=FALSE){
+  
+  if (withp){
+    if(pval>=0.001){
+      pval.text <- paste0("p=",round(pval,3))
+    }else{
+      pval.text <- "p<0.001"
+    }
+    return(pval.text)
+  }else{
+    if(pval>=0.001){
+      pval.text <- paste0(round(pval,3))
+    }else{
+      pval.text <- "<0.001"
+    }
+    return(pval.text)
+  }
+}
+
+pval_star <- function(pval){
+  
+  stars <- ifelse(pval<0.05&pval>=0.01,"*",ifelse(pval<0.01&pval>=0.001,"**",ifelse(pval<0.001,"***","")))
+  
+  return(stars)
+}
+
+
+
+
+library(patchwork)
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(lme4)
+library(lmerTest)
+library(irr)
+
+### t 
+
+
+# test p-value
+
+# y <- T1_long$value
+# trt <- T1_long$gender
+# id <- T1_long$id
+
+t_test_p <- function(y, trt, id){
+  test <- summary(aov(y ~ trt + Error(id)))
+  
+  test[[2]][[1]]$"Pr(>F)"[1]
+}
+
+
+
+## compute ICC and RC and bias
+
+# y1 <- T1intra$A
+# y2 <- T1intra$B
+
+icc_rc <- function(y1, y2, r = 3, r1 = 1){
+  obj <- icc(cbind(y1, y2))
+  
+  icc <- str_c(round(obj$value, r), " (",
+               round(obj$lbound, r), ", ",
+               round(obj$ubound, r), ")")
+  icc_p <- ptrans(obj$p.value, withp = TRUE)
+  
+  diff <- y1 - y2
+  
+  bias <- round(mean(diff, na.rm = TRUE), r1)
+  RC <- round(1.96 * sd(diff, na.rm = TRUE), r1)
+  
+  str_c(bias, "|", RC, "|", icc, "|", icc_p)
+  
+}
+
+
+# read demographic data
+demo <- read_excel("data//Cardmap_demographics_short.xlsx") |> 
+  janitor::clean_names() |> 
+  mutate(
+    id = parse_number(subj_number),
+    .before = 1
+  ) |> 
+  select(
+    !subj_number
+  )
+
+# T1 main
+T1dat <- read_excel("data//T1_results_20240317_short.xlsx", 
+                    na = "d") |>  
+  janitor::clean_names() |> 
+  rename(
+    id = card_map
+  )
+
+
+
+# T2 main
+T2dat <- read_excel("data//T2_results_20240317_short.xlsx", 
+                    na = c("d", "nan")) |>  
+  janitor::clean_names() |> 
+  rename(
+    id = card_map
+  )
+
+
+```
+
+## Subject characteristics
+
+```{r}
+#| label: tbl-demo
+#| tbl-cap: Patient age distribution by gender.
+
+# quantitative age
+age <- 
+  demo |> 
+  group_by(gender) |> 
+  summarize(
+    med_iqr = str_c(quantile(age)[3], " (", quantile(age)[2], ", ", quantile(age)[4], ")")
+  ) |> 
+  pivot_wider(
+    values_from = med_iqr,
+    names_from = gender
+  ) |> 
+  mutate(
+    " " = "Age (years)",
+    "  " = "median (IQR)",
+    .before = 1
+  )
+ 
+# age group
+
+age_c <- demo |> 
+  group_by(gender, age_group) |> 
+  summarize(
+    n = n()
+  )
+ 
+
+age_cat <- age_c |> left_join(
+  age_c |> group_by(gender) |> summarize(N = sum(n))
+) |> 
+  mutate(
+    N_pct = str_c(n, " (", round(100 * n / N, 1), "%)")
+  ) |> 
+  pivot_wider(
+    id_cols = age_group,
+    values_from = N_pct,
+    names_from = gender
+  ) |> 
+  mutate(
+    " " = "",
+    .before = 1
+  ) |> 
+  rename(
+    "  " = age_group
+  )
+
+
+age_stats <- age |> add_row(age_cat)
+
+gender_n <- demo |> count(gender) |> pull(n)
+
+colnames(age_stats)[3:4] <- str_c(colnames(age_stats)[3:4], " (N=",
+                                  gender_n, ")")
+
+kable(age_stats)
+```
+
+## Age- and gender-specific reference ranges
+
+-   **Slice 1**: AHA1 -- AHA6, Sept1
+-   **Slice 2**: AHA7 -- AHA12, Sept2
+-   **Slice 3**: AHA13 -- AHA16, Sept3
+
+```{r}
+
+# merge demo data to T1 and take recon==DL
+
+T1tmp <- demo |> 
+  left_join(T1dat |> filter(recon == "DL"), join_by(id))
+
+
+# colnames(T1tmp)
+
+T1_long <- T1tmp |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, map, name, slice, value) 
+
+# View(T1_long)
+
+za <- qnorm(0.975)
+
+# gender-------------------------------------------
+T1_gender <- T1_long |> 
+  group_by(gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+  range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = gender
+  )
+
+T1_gender1 <- T1_long |> 
+  group_by(gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+  # range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = gender
+  )
+
+T1_gender_p <- T1_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, gender, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T1 reference ranges
+T1_gender_tab <- 
+  T1_gender |> 
+  left_join(
+    T1_gender_p
+  )
+
+T1_gender1_tab <- 
+  T1_gender1 |> 
+  left_join(
+    T1_gender_p
+  )
+# age group-------------------------------------------
+T1_age <- T1_long |> 
+  group_by(age_group, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+  range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_group
+  )
+
+T1_age1 <- T1_long |> 
+  group_by(age_group, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+  # range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_group
+  )
+
+
+T1_age_p <- T1_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, age_group, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T1 reference ranges
+T1_age_tab <- 
+  T1_age |> 
+  left_join(
+    T1_age_p
+  )
+
+T1_age1_tab <- 
+  T1_age1 |> 
+  left_join(
+    T1_age_p
+  )
+
+# View(T1_age_tab)
+
+
+# merge demo data to T2 and take recon==DL ----------
+
+T2tmp <- demo |> 
+  left_join(T2dat |> filter(recon == "DL"), join_by(id))
+
+
+# colnames(T1tmp)
+
+T2_long <- T2tmp |> 
+  pivot_longer(
+    c(aha1:aha16,sept_1_mean, sept_2_mean, sept_3_mean),
+    values_to = "value",
+    names_to = "name"
+  ) |> 
+  mutate(
+    name = fct(name),
+    slice = case_when(
+      name %in% c(str_c("aha", 1:6), "sept_1_mean") ~ "Slice 1",
+      name %in% c(str_c("aha", 7:12), "sept_2_mean") ~ "Slice 2",
+      name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
+    )
+  ) |> 
+  select(id, age_group, gender, map, name, slice, value) |> 
+  filter(
+    !is.na(map)
+  )
+
+# View(T2_long)
+
+za <- qnorm(0.975)
+
+# gender-------------------------------------------
+T2_gender <- T2_long |> 
+  group_by(gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+   range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = gender
+  )
+
+T2_gender1 <- T2_long |> 
+  group_by(gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+   # range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = gender
+  )
+
+# View(T2_gender)
+
+# T2_gender |> 
+  # filter(is.na(map))
+
+T2_gender_p <- T2_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, gender, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T2 reference ranges
+T2_gender_tab <- 
+  T2_gender |> 
+  left_join(
+    T2_gender_p
+  )
+
+T2_gender1_tab <- 
+  T2_gender1 |> 
+  left_join(
+    T2_gender_p
+  )
+# age group-------------------------------------------
+
+
+T2_age <- T2_long |> 
+  group_by(age_group, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_group
+  )
+
+T2_age1 <- T2_long |> 
+  group_by(age_group, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_group
+  )
+
+T2_age_p <- T2_long |> 
+  group_by(map,  name) |> 
+  summarize(
+    P = round(t_test_p(value, age_group, id), 3),
+    P = if_else(P > 0 , as.character(P), "<0.001")
+  ) 
+
+## tabulate T2 reference ranges
+T2_age_tab <- 
+  T2_age |> 
+  left_join(
+    T2_age_p
+  )
+
+T2_age1_tab <- 
+  T2_age1 |> 
+  left_join(
+    T2_age_p
+  )
+```
+
+### T1 measurements
+
+The gender- and age-specific mean values and 95% ranges are summarized for each segment for MOLLI and SMART in @tbl-ref-t1-gender and @tbl-ref-t1-age.
+
+```{r}
+#| label: tbl-ref-t1-gender
+#| tbl-cap: Gender-specific mean (+- 2SD) for T1.
+#| tbl-subcap:
+#|   - "Range"
+#|   - "mean (+- 2SD)"
+
+T1_gender_tab |> 
+  kable(align = "c")
+
+T1_gender1_tab |> 
+  kable(align = "c")
+
+```
+
+```{r}
+#| label: tbl-ref-t1-age
+#| tbl-cap: Age--specific mean (+- 2SD) for T1.
+#| tbl-subcap:
+#|   - "Range"
+#|   - "mean (+- 2SD)"
+
+T1_age_tab |> 
+  kable(align = "c")
+
+T1_age1_tab |> 
+  kable(align = "c")
+```
+
+```{r}
+#| label: fig-ref-t1-molli
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T1-MOLLI.
+#| fig-width: 8
+#| fig-height: 8
+
+# T1_sum |> 
+#   filter(map == "MOLLI") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+```{r}
+#| label: fig-ref-t1-smart
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T1-SMART.
+#| fig-width: 8
+#| fig-height: 8
+
+# T1_sum |> 
+#   filter(map == "SMART") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+Three-way ANOVA test (@tbl-anova-t1) confirms that gender and slice differences are significant, and that age difference is not.
+
+```{r}
+#| label: tbl-anova-t1
+#| tbl-cap: P-values from three-way ANOVA test on age, gender, and slice differences.
+
+# ?lmer
+obj_molly <- lmer(value ~ age_group + gender + slice + (1|id), data = T1_long |> filter(map == "MOLLI"))
+obj_smart<- lmer(value ~ age_group + gender + slice + (1|id), data = T1_long |> filter(map == "SMART"))
+
+
+anova_tab <- rbind(anova(obj_molly)[, 6],
+                   anova(obj_smart)[, 6])
+
+anova_tab_fmt <- matrix(NA, 2, 3)
+
+
+for (j in 1:3){
+  anova_tab_fmt[1, j] <- ptrans(anova_tab[1, j])
+  anova_tab_fmt[2, j] <- ptrans(anova_tab[2, j])
+}
+
+colnames(anova_tab_fmt) <- c("Age", "Gender", "Slice")
+rownames(anova_tab_fmt) <- c("MOLLI", "SMART")
+
+
+kable(anova_tab_fmt, align = "c")
+```
+
+```{r}
+#| label: tbl-anova-t1-wi-slice
+#| tbl-cap: P-values for between-segment differences within each slice adjusting for age and gender for T1.
+
+# test of segments within slice
+# k <- 1
+# df <- T1_long 
+
+test_within_slice <- function(df, k){
+
+  obj <- lmer(value ~ age_group + gender + name + (1|id), data = df |> filter(slice == str_c("Slice ", k)))
+  
+  pval <- ptrans(anova(obj)[3, 6])
+  
+  return(pval)
+}
+
+
+t1_within_slice_tab <- tibble(
+  " " = c("MOLLI", "SMART"),
+  "Slice 1" = c(test_within_slice(T1_long |> filter(map == "MOLLI"), 1),
+                test_within_slice(T1_long |> filter(map == "SMART"), 1)),
+  "Slice 2" = c(test_within_slice(T1_long |> filter(map == "MOLLI"), 2),
+                test_within_slice(T1_long |> filter(map == "SMART"), 2)),
+  "Slice 3" = c(test_within_slice(T1_long |> filter(map == "MOLLI"), 3),
+                test_within_slice(T1_long |> filter(map == "SMART"), 3))
+)
+
+kable(t1_within_slice_tab, align = "c")
+
+```
+
+### T2 measurements
+
+The gender- and age-specific mean values and 95% ranges are summarized for each segment for T2 and T2-fast in @tbl-ref-t2-gender and @tbl-ref-t2-age.
+
+```{r}
+#| label: tbl-ref-t2-gender
+#| tbl-cap: Gender-specific mean (+- 2SD) for T2.
+#| tbl-subcap:
+#|   - "Range"
+#|   - "mean (+- 2SD)"
+
+
+T2_gender_tab |> 
+  kable(align = "c")
+
+T2_gender1_tab |> 
+  kable(align = "c")
+```
+
+```{r}
+#| label: fig-ref-t2-t2
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T2.
+#| fig-width: 8
+#| fig-height: 8
+
+# T2_sum |> 
+#   filter(map == "T2") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+```{r}
+#| label: tbl-ref-t2-age
+#| tbl-cap: Age-specific mean (+- 2SD) for T2.
+#| tbl-subcap:
+#|   - "Range"
+#|   - "mean (+- 2SD)"
+
+
+T2_age_tab |> 
+  kable(align = "c")
+
+T2_age1_tab |> 
+  kable(align = "c")
+```
+
+```{r}
+#| label: fig-ref-t2-fast
+#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T2-fast.
+#| fig-width: 8
+#| fig-height: 8
+
+# T2_sum |> 
+#   filter(map == "T2fast") |>  
+#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
+#   geom_col(position = position_dodge(0.9)) +
+#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
+#                 linewidth = 1) +
+#   scale_x_discrete(name = "Age") +
+#   scale_y_continuous(name = "Mean (95% range)") +
+#   scale_fill_manual(values = c("gray80", "gray40")) + 
+#   facet_wrap( ~ slice, ncol = 1) +
+#   theme_minimal() +
+#   theme(
+#     panel.grid.major.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     legend.position = "top",
+#     legend.title = element_blank(),
+#     strip.text = element_text(size = 11)
+#   )
+
+```
+
+Three-way ANOVA test (@tbl-anova-t2) shows that age, gender and slice all have significant effects.
+
+```{r}
+#| label: tbl-anova-t2
+#| tbl-cap: P-values from three-way ANOVA test on age, gender, and slice differences.
+
+# ?lmer
+obj_t2 <- lmer(value ~ age_group + gender + slice + (1|id), data = T2_long |> filter(map == "T2"))
+obj_fast<- lmer(value ~ age_group + gender + slice + (1|id), data = T2_long |> filter(map == "T2fast"))
+
+
+anova_tab <- rbind(anova(obj_t2)[, 6],
+                   anova(obj_fast)[, 6])
+
+anova_tab_fmt <- matrix(NA, 2, 3)
+
+
+for (j in 1:3){
+  anova_tab_fmt[1, j] <- ptrans(anova_tab[1, j])
+  anova_tab_fmt[2, j] <- ptrans(anova_tab[2, j])
+}
+
+colnames(anova_tab_fmt) <- c("Age", "Gender", "Slice")
+rownames(anova_tab_fmt) <- c("T2", "T2-fast")
+
+
+kable(anova_tab_fmt, align = "c")
+```
+
+```{r}
+#| label: tbl-anova-t2-wi-slice
+#| tbl-cap: P-values for between-segment differences within each slice adjusting for age and gender for T2.
+
+# test of segments within slice
+# k <- 1
+# df <- T1_long 
+
+
+
+t2_within_slice_tab <- tibble(
+  " " = c("T2", "T2fast"),
+  "Slice 1" = c(test_within_slice(T2_long |> filter(map == "T2"), 1),
+                test_within_slice(T2_long |> filter(map == "T2fast"), 1)),
+  "Slice 2" = c(test_within_slice(T2_long |> filter(map == "T2"), 2),
+                test_within_slice(T2_long |> filter(map == "T2fast"), 2)),
+  "Slice 3" = c(test_within_slice(T2_long |> filter(map == "T2"), 3),
+                test_within_slice(T2_long |> filter(map == "T2fast"), 3))
+)
+
+kable(t2_within_slice_tab, align = "c")
+```
+
+### Area of septal contours
+
+The mean and standard deviation (SD) of septal contour area by age and gender for T1 and T2 are summarized in @tbl-sept-area-t1 and @tbl-sept-area-t2, respectively. In general, sept1 \> sept2 \> sept3.
+
+```{r}
+#| label: tbl-sept-area-t1
+#| tbl-cap: Mean (+- 2SD) of septal contour area for T1.
+
+
+T1_sept <- T1tmp |> 
+  pivot_longer(
+    c(sept_1_area, sept_2_area, sept_3_area),
+    values_to = "value",
+    names_to = "sept"
+  ) |> 
+  select(
+    id, gender, map, sept, value
+  )
+
+## summary table for T1
+
+T1_sept |> 
+  group_by(
+      gender, map,   sept
+  ) |> 
+  summarize(
+    stats = str_c(round(mean(value, na.rm = TRUE), 1), " \u00B1 ",
+                  round(2 * sd(value, na.rm = TRUE), 1))
+  ) |> 
+  pivot_wider(
+    values_from = stats,
+    names_from = gender
+  ) |> 
+  rename(
+    Map = map,
+    Sept = sept
+  ) |> 
+  kable(
+    align = "c"
+  )
+```
+
+```{r}
+#| label: tbl-sept-area-t2
+#| tbl-cap: Mean (+- 2SD) of septal contour area for T2.
+
+T2_sept <- T2tmp |> 
+  pivot_longer(
+    c(sept_1_area, sept_2_area, sept_3_area),
+    values_to = "value",
+    names_to = "sept"
+  ) |> 
+  select(
+    id, gender, map, sept, value
+  ) |> 
+  filter(
+    !is.na(map)
+  )
+
+## summary table for T2
+
+T2_sept |> 
+  group_by(
+    gender, map,   sept
+  ) |> 
+  summarize(
+    stats = str_c(round(mean(value, na.rm = TRUE), 1), " \u00B1 ",
+                  round(2 * sd(value, na.rm = TRUE), 1))
+  ) |> 
+  pivot_wider(
+    values_from = stats,
+    names_from = gender
+  ) |> 
+  rename(
+    Map = map,
+    Sept = sept
+  ) |> 
+  kable(
+    align = "c"
+  )
+  
+```
+
