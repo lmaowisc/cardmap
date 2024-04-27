@@ -475,6 +475,22 @@ T1icc_inter <- T1inter |>
     across(c("RC", "Bias"), parse_number)
   )
 
+T1icc_inter_seg <- T1inter |> 
+  group_by(
+    map, name
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
 # BA plot for T1
 BAT1inter <- T1inter |> 
   mutate(
@@ -503,6 +519,21 @@ BAT1inter <- T1inter |>
 T2icc_inter <- T2inter |> 
   group_by(
     map
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+T2icc_inter_seg <- T2inter |> 
+  group_by(
+    map, name
   ) |> 
   summarize(
     results = icc_rc(A, B)
@@ -544,17 +575,6 @@ BAT2inter <- T2inter |>
 The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in @tbl-icc-rep-inter-sys. Bland-Altman plots are shown in @fig-BA-rep-inter-sys.
 
 ```{r}
-#| label: tbl-icc-rep-inter-sys
-#| tbl-cap:  Between-system reproducibility analysis of T1 and T2.
-
-T1icc_inter |> 
-  add_row(T2icc_inter) |> 
-  kable(align = "c")
-
-
-```
-
-```{r}
 #| label: fig-BA-rep-inter-sys
 #| fig-cap: Bland-Altman analysis of between-system reproducibility for T1 and T2
 #| fig-width: 8
@@ -563,7 +583,20 @@ T1icc_inter |>
 BAT1inter / BAT2inter + plot_layout(guides = "collect") & theme(legend.position = "top")
 ```
 
-### Between-sequence reproducibility
+
+```{r}
+#| label: tbl-icc-rep-inter-sys
+#| tbl-cap:  Between-system reproducibility analysis of T1 and T2.
+
+T1icc_inter_seg |> 
+  kable(align = "c")
+
+T2icc_inter_seg |> 
+  kable(align = "c")
+```
+
+
+## Between-sequence reproducibility
 
 <!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-sequence reproducibility 1) MOLLI DL vs SMART1 DL, 2) T2 DL vs T2fast DL. (If data from scan A is not available for intra-system subjects, feel free to use scan B data.) -->
 
@@ -698,6 +731,22 @@ allseq_icc <- allseq |>
     across(c("RC", "Bias"), parse_number)
   )
 
+allseq_icc_seg <- allseq |> 
+  group_by(
+    seq, name
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
+
 # BA plot for T1
 BATseq <- allseq |> 
   mutate(
@@ -727,17 +776,6 @@ BATseq <- allseq |>
 The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI vs SMART and T2 vs T2fast are tabulated in @tbl-icc-rep-seq. Bland-Altman plots are shown in @fig-BA-rep-seq. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) Bias for MOLLI vs SMART is substantial: SMART values are bigger, causing lack of agreement.
 
 ```{r}
-#| label: tbl-icc-rep-seq
-#| tbl-cap:  Between-sequence reproducibility analysis of T1 and T2.
-
-allseq_icc |> 
-  rename(" " =  seq) |> 
-  kable(align = "c")
-
-
-```
-
-```{r}
 #| label: fig-BA-rep-seq
 #| fig-cap: Bland-Altman analysis of between-sequence reproducibility for T1 and T2
 #| fig-width: 8
@@ -746,7 +784,21 @@ allseq_icc |>
 BATseq + theme(legend.position = "top")
 ```
 
-### Between-recon reproducibility
+
+```{r}
+#| label: tbl-icc-rep-seq
+#| tbl-cap:  Between-sequence reproducibility analysis of T1 and T2.
+
+allseq_icc_seg |> 
+  rename(" " =  seq) |> 
+  kable(align = "c")
+
+
+```
+
+
+
+## Between-recon reproducibility
 
 <!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-recon reproducibility 1) MOLLI Std vs MOLLI DL, 2) T2 Std vs T2 DL, 3) T2 DL vs T2 GE.  -->
 
@@ -958,7 +1010,21 @@ allrecon_icc <- recon_all |>
     across(c("RC", "Bias"), parse_number)
   )
 
-
+allrecon_icc_seg <- recon_all |> 
+  group_by(
+    recon, name
+  ) |> 
+  summarize(
+    results = icc_rc(A, B)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
 
 # BA plot for recon
 BATrecon <- recon_all |> 
@@ -987,16 +1053,6 @@ BATrecon <- recon_all |>
 
 The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI: Std vs DL, T2: Std vs DL, and T2: DL vs GE are tabulated in @tbl-icc-rep-recon. Bland-Altman plots are shown in @fig-BA-rep-recon. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) There is strong agreement within the three pairs of comparisons.
 
-```{r}
-#| label: tbl-icc-rep-recon
-#| tbl-cap:  Between-recon reproducibility analysis of T1 and T2.
-
-allrecon_icc  |> 
-  rename(" " =  recon) |> 
-  kable(align = "c")
-
-
-```
 
 ```{r}
 #| label: fig-BA-rep-recon
@@ -1007,7 +1063,19 @@ allrecon_icc  |>
 BATrecon + theme(legend.position = "top")
 ```
 
-### Between-reader reproducibility
+```{r}
+#| label: tbl-icc-rep-recon
+#| tbl-cap:  Between-recon reproducibility analysis of T1 and T2.
+
+allrecon_icc_seg  |> 
+  rename(" " =  recon) |> 
+  kable(align = "c")
+
+
+```
+
+
+## Between-reader reproducibility
 
 <!-- for between-reader reproducibility, use subjects from the two “interreader” tables and compare them to the ones in the main tables. Use MOLLI DL and T2 DL data only. Readers were “RVS” and “AF”. -->
 
@@ -1233,7 +1301,21 @@ all_reads_icc <- all_reads |>
     across(c("RC", "Bias"), parse_number)
   )
 
-
+all_reads_icc_seg <- all_reads |> 
+  group_by(
+    map, name
+  ) |> 
+  summarize(
+    results = icc_rc(RVS, AF)
+  ) |> 
+  separate_wider_delim(
+    results,
+    delim = "|",
+    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+  ) |> 
+  mutate(
+    across(c("RC", "Bias"), parse_number)
+  )
 
 # BA plot for recon
 BATreads <- all_reads |> 
@@ -1264,17 +1346,6 @@ BATreads <- all_reads |>
 The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing RVS vs AF for MOLLI and T2 are tabulated in @tbl-icc-rep-reads. Bland-Altman plots are shown in @fig-BA-rep-reads. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) The inter-reader agreement is strong.
 
 ```{r}
-#| label: tbl-icc-rep-reads
-#| tbl-cap:  Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.
-
-all_reads_icc  |> 
-  rename(" " =  map) |> 
-  kable(align = "c")
-
-
-```
-
-```{r}
 #| label: fig-BA-rep-reads
 #| fig-cap: Bland-Altman analysis of between-reader (RVS vs AF) reproducibility for MOLLI and T2
 #| fig-width: 8
@@ -1282,3 +1353,16 @@ all_reads_icc  |>
 
 BATreads+ theme(legend.position = "top")
 ```
+
+
+```{r}
+#| label: tbl-icc-rep-reads
+#| tbl-cap:  Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.
+
+all_reads_icc_seg  |> 
+  rename(" " =  map) |> 
+  kable(align = "c")
+
+
+```
+
