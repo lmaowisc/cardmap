@@ -827,7 +827,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="between-system-reproducibility" class="level2">
 <h2 class="anchored" data-anchor-id="between-system-reproducibility">Between-system reproducibility</h2>
-<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in <strong>?@tbl-icc-rep-inter-sys</strong>. Bland-Altman plots are shown in <a href="#fig-BA-rep-inter-sys">Figure&nbsp;2</a>.</p>
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in <a href="#tbl-icc-rep-inter-sys">Table&nbsp;2</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-inter-sys">Figure&nbsp;2</a>.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-BA-rep-inter-sys" class="quarto-figure quarto-figure-center anchored">
@@ -840,11 +840,12 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <div id="tbl-icc-rep-inter-sys" class="cell tbl-parent quarto-layout-panel anchored">
 <div class="panel-caption table-caption">
-<p>Between-system reproducibility analysis of T1 and T2.</p>
+<p>Table&nbsp;2: Between-system reproducibility analysis of T1 and T2.</p>
 </div>
 <div class="quarto-layout-row quarto-layout-valign-top">
-<div class="cell-output-display quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<div id="tbl-icc-rep-inter-sys-1" class="quarto-layout-cell quarto-layout-cell-subref anchored" data-ref-parent="tbl-icc-rep-inter-sys" style="flex-basis: 100.0%;justify-content: center;">
 <table class="table table-sm table-striped small">
+<caption>(a) T1</caption>
 <colgroup>
 <col style="width: 10%">
 <col style="width: 19%">
@@ -1173,8 +1174,9 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <div class="quarto-layout-row quarto-layout-valign-top">
-<div class="cell-output-display quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<div id="tbl-icc-rep-inter-sys-2" class="quarto-layout-cell quarto-layout-cell-subref anchored" data-ref-parent="tbl-icc-rep-inter-sys" style="flex-basis: 100.0%;justify-content: center;">
 <table class="table table-sm table-striped small">
+<caption>(b) T2</caption>
 <colgroup>
 <col style="width: 11%">
 <col style="width: 19%">
@@ -1507,7 +1509,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="between-sequence-reproducibility" class="level2">
 <h2 class="anchored" data-anchor-id="between-sequence-reproducibility">Between-sequence reproducibility</h2>
 <!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-sequence reproducibility 1) MOLLI DL vs SMART1 DL, 2) T2 DL vs T2fast DL. (If data from scan A is not available for intra-system subjects, feel free to use scan B data.) -->
-<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI vs SMART and T2 vs T2fast are tabulated in <a href="#tbl-icc-rep-seq">Table&nbsp;2</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-seq">Figure&nbsp;3</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) Bias for MOLLI vs SMART is substantial: SMART values are bigger, causing lack of agreement.</p>
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI vs SMART and T2 vs T2fast are tabulated in <a href="#tbl-icc-rep-seq">Table&nbsp;3</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-seq">Figure&nbsp;3</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) Bias for MOLLI vs SMART is substantial: SMART values are bigger, causing lack of agreement.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-BA-rep-seq" class="quarto-figure quarto-figure-center anchored">
@@ -1522,7 +1524,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div id="tbl-icc-rep-seq" class="anchored">
 <table class="table table-sm table-striped small">
-<caption>Table&nbsp;2: Between-sequence reproducibility analysis of T1 and T2.</caption>
+<caption>Table&nbsp;3: Between-sequence reproducibility analysis of T1 and T2.</caption>
 <colgroup>
 <col style="width: 20%">
 <col style="width: 16%">
@@ -1855,7 +1857,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="between-recon-reproducibility" class="level2">
 <h2 class="anchored" data-anchor-id="between-recon-reproducibility">Between-recon reproducibility</h2>
 <!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-recon reproducibility 1) MOLLI Std vs MOLLI DL, 2) T2 Std vs T2 DL, 3) T2 DL vs T2 GE.  -->
-<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI: Std vs DL, T2: Std vs DL, and T2: DL vs GE are tabulated in <a href="#tbl-icc-rep-recon">Table&nbsp;3</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-recon">Figure&nbsp;4</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) There is strong agreement within the three pairs of comparisons.</p>
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI: Std vs DL, T2: Std vs DL, and T2: DL vs GE are tabulated in <a href="#tbl-icc-rep-recon">Table&nbsp;4</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-recon">Figure&nbsp;4</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) There is strong agreement within the three pairs of comparisons.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-BA-rep-recon" class="quarto-figure quarto-figure-center anchored">
@@ -1870,7 +1872,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div id="tbl-icc-rep-recon" class="anchored">
 <table class="table table-sm table-striped small">
-<caption>Table&nbsp;3: Between-recon reproducibility analysis of T1 and T2.</caption>
+<caption>Table&nbsp;4: Between-recon reproducibility analysis of T1 and T2.</caption>
 <colgroup>
 <col style="width: 24%">
 <col style="width: 17%">
@@ -2356,7 +2358,7 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="between-reader-reproducibility">Between-reader reproducibility</h2>
 
 <!-- for between-reader reproducibility, use subjects from the two “interreader” tables and compare them to the ones in the main tables. Use MOLLI DL and T2 DL data only. Readers were “RVS” and “AF”. -->
-<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing RVS vs AF for MOLLI and T2 are tabulated in <a href="#tbl-icc-rep-reads">Table&nbsp;4</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-reads">Figure&nbsp;5</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) The inter-reader agreement is strong.</p>
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing RVS vs AF for MOLLI and T2 are tabulated in <a href="#tbl-icc-rep-reads">Table&nbsp;5</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-reads">Figure&nbsp;5</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) The inter-reader agreement is strong.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-BA-rep-reads" class="quarto-figure quarto-figure-center anchored">
@@ -2371,7 +2373,7 @@ ul.task-list li input[type="checkbox"] {
 <div class="cell-output-display">
 <div id="tbl-icc-rep-reads" class="anchored">
 <table class="table table-sm table-striped small">
-<caption>Table&nbsp;4: Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.</caption>
+<caption>Table&nbsp;5: Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.</caption>
 <colgroup>
 <col style="width: 10%">
 <col style="width: 19%">

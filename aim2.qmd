@@ -587,6 +587,9 @@ BAT1inter / BAT2inter + plot_layout(guides = "collect") & theme(legend.position 
 ```{r}
 #| label: tbl-icc-rep-inter-sys
 #| tbl-cap:  Between-system reproducibility analysis of T1 and T2.
+#| tbl-subcap:
+#|   - "T1"
+#|   - "T2"
 
 T1icc_inter_seg |> 
   kable(align = "c")
