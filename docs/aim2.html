@@ -60,6 +60,8 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -109,7 +111,17 @@ ul.task-list li input[type="checkbox"] {
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#repeatability-for-dl-reconstructions" id="toc-repeatability-for-dl-reconstructions" class="nav-link active" data-scroll-target="#repeatability-for-dl-reconstructions">Repeatability for DL reconstructions</a></li>
+  <li><a href="#between-system-reproducibility" id="toc-between-system-reproducibility" class="nav-link" data-scroll-target="#between-system-reproducibility">Between-system reproducibility</a></li>
+  <li><a href="#between-sequence-reproducibility" id="toc-between-sequence-reproducibility" class="nav-link" data-scroll-target="#between-sequence-reproducibility">Between-sequence reproducibility</a></li>
+  <li><a href="#between-recon-reproducibility" id="toc-between-recon-reproducibility" class="nav-link" data-scroll-target="#between-recon-reproducibility">Between-recon reproducibility</a></li>
+  <li><a href="#between-reader-reproducibility" id="toc-between-reader-reproducibility" class="nav-link" data-scroll-target="#between-reader-reproducibility">Between-reader reproducibility</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -131,9 +143,907 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<p>Age- and gender-specific upper and lower ranges within each slice were calculated as the mean plus and minus 2 standard deviations of the normal data, respectively. Differences by age, gender, and slice were assessed by three-way repeated measures ANOVA. Repeatability and reproducibility were assessed by the intra-class correlation coefficient (ICC) <span class="citation" data-cites="fleiss1971">[@fleiss1971]</span>, repeatability/reproducibiliy coefficient, and Bland-Altman analysis. P-values &lt; 0.05 were considered statistically significant. All analyses were performed in R version 4.3.2 (R Foundation for Statistical Computing, Vienna, Austria).</p>
+<section id="repeatability-for-dl-reconstructions" class="level3">
+<h3 class="anchored" data-anchor-id="repeatability-for-dl-reconstructions">Repeatability for DL reconstructions</h3>
+<!-- use “intra-system” subjects for repeatability of sequence at same MR system for DL reconstructions for T1 Molli, T1 Smart1, T2, T2 fast (each n=15) -->
+<p>The bias, repeatability coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in <a href="#tbl-icc-repeat">Table&nbsp;1</a>. Bland-Altman plots are shown in <a href="#fig-BA-repeat">Figure&nbsp;1</a>.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-BA-repeat" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="aim2_files/figure-html/fig-BA-repeat-1.png" class="img-fluid figure-img" width="768"></p>
+<figcaption class="figure-caption">Figure&nbsp;1: Bland-Altman analysis of repeatability for T1 and T2</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="tbl-icc-repeat" class="cell tbl-parent quarto-layout-panel anchored">
+<div class="panel-caption table-caption">
+<p>Table&nbsp;1: Repeatability analysis of T1 and T2.</p>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div id="tbl-icc-repeat-1" class="quarto-layout-cell quarto-layout-cell-subref anchored" data-ref-parent="tbl-icc-repeat" style="flex-basis: 100.0%;justify-content: center;">
+<table class="table table-sm table-striped small">
+<caption>(a) T1</caption>
+<colgroup>
+<col style="width: 10%">
+<col style="width: 19%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 35%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">map</th>
+<th style="text-align: center;">name</th>
+<th style="text-align: center;">Bias</th>
+<th style="text-align: center;">RC</th>
+<th style="text-align: center;">ICC (95% CI)</th>
+<th style="text-align: center;">P-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha1</td>
+<td style="text-align: center;">17.5</td>
+<td style="text-align: center;">132.7</td>
+<td style="text-align: center;">0.507 (-0.071, 0.836)</td>
+<td style="text-align: center;">p=0.04</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha2</td>
+<td style="text-align: center;">18.8</td>
+<td style="text-align: center;">86.7</td>
+<td style="text-align: center;">0.612 (0.083, 0.877)</td>
+<td style="text-align: center;">p=0.014</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha3</td>
+<td style="text-align: center;">7.1</td>
+<td style="text-align: center;">45.6</td>
+<td style="text-align: center;">0.845 (0.517, 0.958)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha4</td>
+<td style="text-align: center;">-4.5</td>
+<td style="text-align: center;">72.4</td>
+<td style="text-align: center;">0.613 (0.05, 0.886)</td>
+<td style="text-align: center;">p=0.018</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha5</td>
+<td style="text-align: center;">17.5</td>
+<td style="text-align: center;">84.5</td>
+<td style="text-align: center;">0.562 (0.006, 0.858)</td>
+<td style="text-align: center;">p=0.024</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha6</td>
+<td style="text-align: center;">34.4</td>
+<td style="text-align: center;">119.0</td>
+<td style="text-align: center;">0.084 (-0.497, 0.625)</td>
+<td style="text-align: center;">p=0.391</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha7</td>
+<td style="text-align: center;">7.2</td>
+<td style="text-align: center;">71.2</td>
+<td style="text-align: center;">0.843 (0.577, 0.949)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha8</td>
+<td style="text-align: center;">21.2</td>
+<td style="text-align: center;">67.1</td>
+<td style="text-align: center;">0.638 (0.179, 0.872)</td>
+<td style="text-align: center;">p=0.006</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha9</td>
+<td style="text-align: center;">16.4</td>
+<td style="text-align: center;">42.3</td>
+<td style="text-align: center;">0.757 (0.37, 0.922)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha10</td>
+<td style="text-align: center;">15.6</td>
+<td style="text-align: center;">48.3</td>
+<td style="text-align: center;">0.649 (0.108, 0.898)</td>
+<td style="text-align: center;">p=0.012</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha11</td>
+<td style="text-align: center;">25.3</td>
+<td style="text-align: center;">91.1</td>
+<td style="text-align: center;">0.454 (-0.14, 0.814)</td>
+<td style="text-align: center;">p=0.062</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha12</td>
+<td style="text-align: center;">24.9</td>
+<td style="text-align: center;">93.3</td>
+<td style="text-align: center;">0.501 (-0.024, 0.814)</td>
+<td style="text-align: center;">p=0.03</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha13</td>
+<td style="text-align: center;">30.6</td>
+<td style="text-align: center;">72.2</td>
+<td style="text-align: center;">0.553 (0.023, 0.845)</td>
+<td style="text-align: center;">p=0.021</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha14</td>
+<td style="text-align: center;">35.7</td>
+<td style="text-align: center;">59.3</td>
+<td style="text-align: center;">0.543 (0.034, 0.833)</td>
+<td style="text-align: center;">p=0.019</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha15</td>
+<td style="text-align: center;">31.6</td>
+<td style="text-align: center;">70.7</td>
+<td style="text-align: center;">0.496 (-0.12, 0.844)</td>
+<td style="text-align: center;">p=0.052</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">aha16</td>
+<td style="text-align: center;">14.4</td>
+<td style="text-align: center;">88.1</td>
+<td style="text-align: center;">0.651 (0.175, 0.884)</td>
+<td style="text-align: center;">p=0.006</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">sept_1_mean</td>
+<td style="text-align: center;">13.1</td>
+<td style="text-align: center;">58.1</td>
+<td style="text-align: center;">0.769 (0.369, 0.931)</td>
+<td style="text-align: center;">p=0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">sept_2_mean</td>
+<td style="text-align: center;">16.1</td>
+<td style="text-align: center;">71.7</td>
+<td style="text-align: center;">0.571 (0.048, 0.852)</td>
+<td style="text-align: center;">p=0.017</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">sept_3_mean</td>
+<td style="text-align: center;">28.1</td>
+<td style="text-align: center;">72.6</td>
+<td style="text-align: center;">0.578 (0.085, 0.848)</td>
+<td style="text-align: center;">p=0.013</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha1</td>
+<td style="text-align: center;">-33.2</td>
+<td style="text-align: center;">155.8</td>
+<td style="text-align: center;">-0.15 (-0.695, 0.526)</td>
+<td style="text-align: center;">p=0.66</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha2</td>
+<td style="text-align: center;">4.6</td>
+<td style="text-align: center;">81.6</td>
+<td style="text-align: center;">0.497 (-0.159, 0.857)</td>
+<td style="text-align: center;">p=0.062</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha3</td>
+<td style="text-align: center;">15.3</td>
+<td style="text-align: center;">45.2</td>
+<td style="text-align: center;">0.724 (0.159, 0.937)</td>
+<td style="text-align: center;">p=0.01</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha4</td>
+<td style="text-align: center;">-17.9</td>
+<td style="text-align: center;">68.3</td>
+<td style="text-align: center;">0.471 (-0.296, 0.881)</td>
+<td style="text-align: center;">p=0.104</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha5</td>
+<td style="text-align: center;">-3.8</td>
+<td style="text-align: center;">193.9</td>
+<td style="text-align: center;">0.502 (-0.152, 0.859)</td>
+<td style="text-align: center;">p=0.06</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha6</td>
+<td style="text-align: center;">20.4</td>
+<td style="text-align: center;">97.5</td>
+<td style="text-align: center;">-0.299 (-0.768, 0.403)</td>
+<td style="text-align: center;">p=0.801</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha7</td>
+<td style="text-align: center;">-4.0</td>
+<td style="text-align: center;">49.4</td>
+<td style="text-align: center;">0.594 (0.109, 0.854)</td>
+<td style="text-align: center;">p=0.01</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha8</td>
+<td style="text-align: center;">5.6</td>
+<td style="text-align: center;">110.0</td>
+<td style="text-align: center;">0.073 (-0.463, 0.579)</td>
+<td style="text-align: center;">p=0.397</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha9</td>
+<td style="text-align: center;">27.2</td>
+<td style="text-align: center;">125.2</td>
+<td style="text-align: center;">0.178 (-0.422, 0.68)</td>
+<td style="text-align: center;">p=0.282</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha10</td>
+<td style="text-align: center;">-18.9</td>
+<td style="text-align: center;">64.5</td>
+<td style="text-align: center;">0.528 (-0.117, 0.868)</td>
+<td style="text-align: center;">p=0.05</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha11</td>
+<td style="text-align: center;">1.7</td>
+<td style="text-align: center;">126.5</td>
+<td style="text-align: center;">0.586 (-0.034, 0.887)</td>
+<td style="text-align: center;">p=0.031</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha12</td>
+<td style="text-align: center;">23.4</td>
+<td style="text-align: center;">129.1</td>
+<td style="text-align: center;">0.294 (-0.264, 0.712)</td>
+<td style="text-align: center;">p=0.146</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha13</td>
+<td style="text-align: center;">5.5</td>
+<td style="text-align: center;">90.7</td>
+<td style="text-align: center;">0.709 (0.277, 0.905)</td>
+<td style="text-align: center;">p=0.002</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha14</td>
+<td style="text-align: center;">28.7</td>
+<td style="text-align: center;">150.1</td>
+<td style="text-align: center;">0.024 (-0.52, 0.565)</td>
+<td style="text-align: center;">p=0.465</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha15</td>
+<td style="text-align: center;">-5.1</td>
+<td style="text-align: center;">130.7</td>
+<td style="text-align: center;">0.734 (0.227, 0.932)</td>
+<td style="text-align: center;">p=0.006</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">aha16</td>
+<td style="text-align: center;">15.3</td>
+<td style="text-align: center;">88.6</td>
+<td style="text-align: center;">0.884 (0.642, 0.967)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">sept_1_mean</td>
+<td style="text-align: center;">7.6</td>
+<td style="text-align: center;">74.5</td>
+<td style="text-align: center;">0.475 (-0.147, 0.835)</td>
+<td style="text-align: center;">p=0.062</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">sept_2_mean</td>
+<td style="text-align: center;">20.2</td>
+<td style="text-align: center;">129.2</td>
+<td style="text-align: center;">-0.089 (-0.637, 0.537)</td>
+<td style="text-align: center;">p=0.6</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">sept_3_mean</td>
+<td style="text-align: center;">24.1</td>
+<td style="text-align: center;">149.0</td>
+<td style="text-align: center;">0.076 (-0.481, 0.599)</td>
+<td style="text-align: center;">p=0.397</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div id="tbl-icc-repeat-2" class="quarto-layout-cell quarto-layout-cell-subref anchored" data-ref-parent="tbl-icc-repeat" style="flex-basis: 100.0%;justify-content: center;">
+<table class="table table-sm table-striped small">
+<caption>(b) T2</caption>
+<colgroup>
+<col style="width: 12%">
+<col style="width: 19%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 36%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">map</th>
+<th style="text-align: center;">name</th>
+<th style="text-align: center;">Bias</th>
+<th style="text-align: center;">RC</th>
+<th style="text-align: center;">ICC (95% CI)</th>
+<th style="text-align: center;">P-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha1</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: center;">5.7</td>
+<td style="text-align: center;">0.608 (0.001, 0.894)</td>
+<td style="text-align: center;">p=0.025</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha2</td>
+<td style="text-align: center;">0.3</td>
+<td style="text-align: center;">9.3</td>
+<td style="text-align: center;">0.256 (-0.417, 0.761)</td>
+<td style="text-align: center;">p=0.226</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha3</td>
+<td style="text-align: center;">1.5</td>
+<td style="text-align: center;">6.9</td>
+<td style="text-align: center;">0.822 (0.46, 0.952)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha4</td>
+<td style="text-align: center;">-0.1</td>
+<td style="text-align: center;">8.1</td>
+<td style="text-align: center;">0.421 (-0.251, 0.829)</td>
+<td style="text-align: center;">p=0.101</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha5</td>
+<td style="text-align: center;">-0.3</td>
+<td style="text-align: center;">3.9</td>
+<td style="text-align: center;">0.885 (0.599, 0.972)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha6</td>
+<td style="text-align: center;">0.6</td>
+<td style="text-align: center;">5.5</td>
+<td style="text-align: center;">0.707 (0.213, 0.917)</td>
+<td style="text-align: center;">p=0.005</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha7</td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;">4.6</td>
+<td style="text-align: center;">0.584 (0.069, 0.858)</td>
+<td style="text-align: center;">p=0.015</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha8</td>
+<td style="text-align: center;">1.4</td>
+<td style="text-align: center;">8.1</td>
+<td style="text-align: center;">-0.377 (-0.76, 0.216)</td>
+<td style="text-align: center;">p=0.9</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha9</td>
+<td style="text-align: center;">1.4</td>
+<td style="text-align: center;">4.5</td>
+<td style="text-align: center;">0.404 (-0.17, 0.78)</td>
+<td style="text-align: center;">p=0.078</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha10</td>
+<td style="text-align: center;">0.4</td>
+<td style="text-align: center;">6.7</td>
+<td style="text-align: center;">0.696 (0.254, 0.901)</td>
+<td style="text-align: center;">p=0.003</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha11</td>
+<td style="text-align: center;">0.9</td>
+<td style="text-align: center;">3.3</td>
+<td style="text-align: center;">0.849 (0.573, 0.953)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha12</td>
+<td style="text-align: center;">0.8</td>
+<td style="text-align: center;">3.7</td>
+<td style="text-align: center;">0.411 (-0.162, 0.783)</td>
+<td style="text-align: center;">p=0.074</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha13</td>
+<td style="text-align: center;">1.1</td>
+<td style="text-align: center;">8.6</td>
+<td style="text-align: center;">0.328 (-0.281, 0.757)</td>
+<td style="text-align: center;">p=0.139</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha14</td>
+<td style="text-align: center;">1.6</td>
+<td style="text-align: center;">7.4</td>
+<td style="text-align: center;">0.372 (-0.206, 0.765)</td>
+<td style="text-align: center;">p=0.097</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha15</td>
+<td style="text-align: center;">1.0</td>
+<td style="text-align: center;">4.6</td>
+<td style="text-align: center;">0.726 (0.309, 0.911)</td>
+<td style="text-align: center;">p=0.002</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">aha16</td>
+<td style="text-align: center;">0.4</td>
+<td style="text-align: center;">3.9</td>
+<td style="text-align: center;">0.796 (0.429, 0.94)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">sept_1_mean</td>
+<td style="text-align: center;">1.9</td>
+<td style="text-align: center;">12.8</td>
+<td style="text-align: center;">0.573 (-0.013, 0.872)</td>
+<td style="text-align: center;">p=0.027</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">sept_2_mean</td>
+<td style="text-align: center;">0.7</td>
+<td style="text-align: center;">6.6</td>
+<td style="text-align: center;">0.192 (-0.385, 0.67)</td>
+<td style="text-align: center;">p=0.257</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">sept_3_mean</td>
+<td style="text-align: center;">1.4</td>
+<td style="text-align: center;">7.6</td>
+<td style="text-align: center;">0.39 (-0.186, 0.773)</td>
+<td style="text-align: center;">p=0.086</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha1</td>
+<td style="text-align: center;">-2.1</td>
+<td style="text-align: center;">8.0</td>
+<td style="text-align: center;">0.032 (-0.56, 0.617)</td>
+<td style="text-align: center;">p=0.457</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha2</td>
+<td style="text-align: center;">0.9</td>
+<td style="text-align: center;">11.6</td>
+<td style="text-align: center;">0.238 (-0.433, 0.752)</td>
+<td style="text-align: center;">p=0.242</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha3</td>
+<td style="text-align: center;">0.4</td>
+<td style="text-align: center;">9.3</td>
+<td style="text-align: center;">0.754 (0.269, 0.938)</td>
+<td style="text-align: center;">p=0.004</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha4</td>
+<td style="text-align: center;">-0.4</td>
+<td style="text-align: center;">18.1</td>
+<td style="text-align: center;">-0.002 (-0.609, 0.626)</td>
+<td style="text-align: center;">p=0.497</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha5</td>
+<td style="text-align: center;">-4.7</td>
+<td style="text-align: center;">19.4</td>
+<td style="text-align: center;">-0.371 (-0.799, 0.333)</td>
+<td style="text-align: center;">p=0.857</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha6</td>
+<td style="text-align: center;">-2.2</td>
+<td style="text-align: center;">10.4</td>
+<td style="text-align: center;">0.252 (-0.386, 0.738)</td>
+<td style="text-align: center;">p=0.217</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha7</td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;">6.3</td>
+<td style="text-align: center;">0.319 (-0.263, 0.738)</td>
+<td style="text-align: center;">p=0.136</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha8</td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;">11.3</td>
+<td style="text-align: center;">-0.062 (-0.58, 0.503)</td>
+<td style="text-align: center;">p=0.578</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha9</td>
+<td style="text-align: center;">0.6</td>
+<td style="text-align: center;">6.8</td>
+<td style="text-align: center;">0.602 (0.096, 0.865)</td>
+<td style="text-align: center;">p=0.012</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha10</td>
+<td style="text-align: center;">-1.9</td>
+<td style="text-align: center;">9.1</td>
+<td style="text-align: center;">0.565 (0.04, 0.85)</td>
+<td style="text-align: center;">p=0.019</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha11</td>
+<td style="text-align: center;">-1.3</td>
+<td style="text-align: center;">10.6</td>
+<td style="text-align: center;">0.351 (-0.229, 0.754)</td>
+<td style="text-align: center;">p=0.111</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha12</td>
+<td style="text-align: center;">0.0</td>
+<td style="text-align: center;">3.5</td>
+<td style="text-align: center;">0.828 (0.523, 0.946)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha13</td>
+<td style="text-align: center;">3.1</td>
+<td style="text-align: center;">10.6</td>
+<td style="text-align: center;">0.242 (-0.366, 0.714)</td>
+<td style="text-align: center;">p=0.215</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha14</td>
+<td style="text-align: center;">2.1</td>
+<td style="text-align: center;">13.4</td>
+<td style="text-align: center;">0.11 (-0.454, 0.621)</td>
+<td style="text-align: center;">p=0.354</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha15</td>
+<td style="text-align: center;">-0.2</td>
+<td style="text-align: center;">6.8</td>
+<td style="text-align: center;">0.527 (-0.043, 0.844)</td>
+<td style="text-align: center;">p=0.034</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">aha16</td>
+<td style="text-align: center;">1.2</td>
+<td style="text-align: center;">7.5</td>
+<td style="text-align: center;">0.606 (0.072, 0.875)</td>
+<td style="text-align: center;">p=0.015</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">sept_1_mean</td>
+<td style="text-align: center;">0.9</td>
+<td style="text-align: center;">8.4</td>
+<td style="text-align: center;">0.695 (0.15, 0.921)</td>
+<td style="text-align: center;">p=0.01</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">sept_2_mean</td>
+<td style="text-align: center;">0.7</td>
+<td style="text-align: center;">7.5</td>
+<td style="text-align: center;">0.426 (-0.144, 0.79)</td>
+<td style="text-align: center;">p=0.066</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">sept_3_mean</td>
+<td style="text-align: center;">2.2</td>
+<td style="text-align: center;">12.9</td>
+<td style="text-align: center;">0.14 (-0.43, 0.639)</td>
+<td style="text-align: center;">p=0.317</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<section id="between-system-reproducibility" class="level3">
+<h3 class="anchored" data-anchor-id="between-system-reproducibility">Between-system reproducibility</h3>
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing scan A vs B are tabulated in <a href="#tbl-icc-rep-inter-sys">Table&nbsp;2</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-inter-sys">Figure&nbsp;2</a>.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-icc-rep-inter-sys" class="anchored">
+<table class="table table-sm table-striped small">
+<caption>Table&nbsp;2: Between-system reproducibility analysis of T1 and T2.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;">map</th>
+<th style="text-align: center;">Bias</th>
+<th style="text-align: center;">RC</th>
+<th style="text-align: center;">ICC (95% CI)</th>
+<th style="text-align: center;">P-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">4.4</td>
+<td style="text-align: center;">113.3</td>
+<td style="text-align: center;">0.601 (0.515, 0.675)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">SMART</td>
+<td style="text-align: center;">-4.3</td>
+<td style="text-align: center;">148.7</td>
+<td style="text-align: center;">0.45 (0.344, 0.545)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">-0.4</td>
+<td style="text-align: center;">10.4</td>
+<td style="text-align: center;">0.41 (0.307, 0.503)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2fast</td>
+<td style="text-align: center;">-0.5</td>
+<td style="text-align: center;">12.4</td>
+<td style="text-align: center;">0.395 (0.285, 0.495)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-BA-rep-inter-sys" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="aim2_files/figure-html/fig-BA-rep-inter-sys-1.png" class="img-fluid figure-img" width="768"></p>
+<figcaption class="figure-caption">Figure&nbsp;2: Bland-Altman analysis of between-system reproducibility for T1 and T2</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="between-sequence-reproducibility" class="level3">
+<h3 class="anchored" data-anchor-id="between-sequence-reproducibility">Between-sequence reproducibility</h3>
+<!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-sequence reproducibility 1) MOLLI DL vs SMART1 DL, 2) T2 DL vs T2fast DL. (If data from scan A is not available for intra-system subjects, feel free to use scan B data.) -->
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI vs SMART and T2 vs T2fast are tabulated in <a href="#tbl-icc-rep-seq">Table&nbsp;3</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-seq">Figure&nbsp;3</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) Bias for MOLLI vs SMART is substantial: SMART values are bigger, causing lack of agreement.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-icc-rep-seq" class="anchored">
+<table class="table table-sm table-striped small">
+<caption>Table&nbsp;3: Between-sequence reproducibility analysis of T1 and T2.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Bias</th>
+<th style="text-align: center;">RC</th>
+<th style="text-align: center;">ICC (95% CI)</th>
+<th style="text-align: center;">P-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">MOLLI vs SMART</td>
+<td style="text-align: center;">-228.6</td>
+<td style="text-align: center;">142.9</td>
+<td style="text-align: center;">-0.641 (-0.679, -0.601)</td>
+<td style="text-align: center;">p=1</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2 vs T2-fast</td>
+<td style="text-align: center;">-1.5</td>
+<td style="text-align: center;">9.5</td>
+<td style="text-align: center;">0.598 (0.554, 0.64)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-BA-rep-seq" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="aim2_files/figure-html/fig-BA-rep-seq-1.png" class="img-fluid figure-img" width="768"></p>
+<figcaption class="figure-caption">Figure&nbsp;3: Bland-Altman analysis of between-sequence reproducibility for T1 and T2</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="between-recon-reproducibility" class="level3">
+<h3 class="anchored" data-anchor-id="between-recon-reproducibility">Between-recon reproducibility</h3>
+<!-- use all subjects (use scan A for each subject except for the inter-system subjects. For the inter-system subjects please use the scan B) for between-recon reproducibility 1) MOLLI Std vs MOLLI DL, 2) T2 Std vs T2 DL, 3) T2 DL vs T2 GE.  -->
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI: Std vs DL, T2: Std vs DL, and T2: DL vs GE are tabulated in <a href="#tbl-icc-rep-recon">Table&nbsp;4</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-recon">Figure&nbsp;4</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) There is strong agreement within the three pairs of comparisons.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-icc-rep-recon" class="anchored">
+<table class="table table-sm table-striped small">
+<caption>Table&nbsp;4: Between-recon reproducibility analysis of T1 and T2.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Bias</th>
+<th style="text-align: center;">RC</th>
+<th style="text-align: center;">ICC (95% CI)</th>
+<th style="text-align: center;">P-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">MOLLI: Std vs DL</td>
+<td style="text-align: center;">-0.7</td>
+<td style="text-align: center;">41.5</td>
+<td style="text-align: center;">0.944 (0.936, 0.95)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2: Std vs DL</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: center;">3.1</td>
+<td style="text-align: center;">0.951 (0.944, 0.956)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">T2: DL vs GE</td>
+<td style="text-align: center;">-0.6</td>
+<td style="text-align: center;">3.8</td>
+<td style="text-align: center;">0.906 (0.893, 0.918)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-BA-rep-recon" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="aim2_files/figure-html/fig-BA-rep-recon-1.png" class="img-fluid figure-img" width="768"></p>
+<figcaption class="figure-caption">Figure&nbsp;4: Bland-Altman analysis of between-recon reproducibility for T1 and T2</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="between-reader-reproducibility" class="level3">
+<h3 class="anchored" data-anchor-id="between-reader-reproducibility">Between-reader reproducibility</h3>
+
+<!-- for between-reader reproducibility, use subjects from the two “interreader” tables and compare them to the ones in the main tables. Use MOLLI DL and T2 DL data only. Readers were “RVS” and “AF”. -->
+<p>The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing RVS vs AF for MOLLI and T2 are tabulated in <a href="#tbl-icc-rep-reads">Table&nbsp;5</a>. Bland-Altman plots are shown in <a href="#fig-BA-rep-reads">Figure&nbsp;5</a>. (Non-inter-system: priority scan A <span class="math inline">\(\to\)</span> B; inter-system: priority scan B <span class="math inline">\(\to\)</span> A.) The inter-reader agreement is strong.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-icc-rep-reads" class="anchored">
+<table class="table table-sm table-striped small">
+<caption>Table&nbsp;5: Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Bias</th>
+<th style="text-align: center;">RC</th>
+<th style="text-align: center;">ICC (95% CI)</th>
+<th style="text-align: center;">P-value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">MOLLI</td>
+<td style="text-align: center;">1.6</td>
+<td style="text-align: center;">70.2</td>
+<td style="text-align: center;">0.807 (0.765, 0.842)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">T2</td>
+<td style="text-align: center;">0.8</td>
+<td style="text-align: center;">6.4</td>
+<td style="text-align: center;">0.711 (0.654, 0.76)</td>
+<td style="text-align: center;">p&lt;0.001</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-BA-rep-reads" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="aim2_files/figure-html/fig-BA-rep-reads-1.png" class="img-fluid figure-img" width="768"></p>
+<figcaption class="figure-caption">Figure&nbsp;5: Bland-Altman analysis of between-reader (RVS vs AF) reproducibility for MOLLI and T2</figcaption>
+</figure>
+</div>
+</div>
+</div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
