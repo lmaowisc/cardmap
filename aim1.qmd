@@ -628,32 +628,6 @@ T2_gender1_tab |>
   kable(align = "c")
 ```
 
-```{r}
-#| label: fig-ref-t2-t2
-#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T2.
-#| fig-width: 8
-#| fig-height: 8
-
-# T2_sum |> 
-#   filter(map == "T2") |>  
-#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
-#   geom_col(position = position_dodge(0.9)) +
-#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
-#                 linewidth = 1) +
-#   scale_x_discrete(name = "Age") +
-#   scale_y_continuous(name = "Mean (95% range)") +
-#   scale_fill_manual(values = c("gray80", "gray40")) + 
-#   facet_wrap( ~ slice, ncol = 1) +
-#   theme_minimal() +
-#   theme(
-#     panel.grid.major.x = element_blank(),
-#     panel.grid.minor.y = element_blank(),
-#     legend.position = "top",
-#     legend.title = element_blank(),
-#     strip.text = element_text(size = 11)
-#   )
-
-```
 
 ```{r}
 #| label: tbl-ref-t2-age
@@ -671,31 +645,63 @@ T2_age1_tab |>
 ```
 
 ```{r}
-#| label: fig-ref-t2-fast
-#| fig-cap: Bar chart for age- and gender-specific mean (95% range) for T2-fast.
-#| fig-width: 8
-#| fig-height: 8
+#| label: tbl-ref-t2-age-gender
+#| tbl-cap: Age-gender-specific mean (+- 2SD) for T2.
+#| tbl-subcap:
+#|   - "Range"
+#|   - "mean (+- 2SD)"
+#|   
+# age x gender group-------------------------------------------
 
-# T2_sum |> 
-#   filter(map == "T2fast") |>  
-#   ggplot(aes(x = age_group, y = mean, fill = gender)) +
-#   geom_col(position = position_dodge(0.9)) +
-#   geom_errorbar(aes(ymin = down, ymax = up), position = position_dodge(0.9), width = 0.5,
-#                 linewidth = 1) +
-#   scale_x_discrete(name = "Age") +
-#   scale_y_continuous(name = "Mean (95% range)") +
-#   scale_fill_manual(values = c("gray80", "gray40")) + 
-#   facet_wrap( ~ slice, ncol = 1) +
-#   theme_minimal() +
-#   theme(
-#     panel.grid.major.x = element_blank(),
-#     panel.grid.minor.y = element_blank(),
-#     legend.position = "top",
-#     legend.title = element_blank(),
-#     strip.text = element_text(size = 11)
-#   )
+
+T2_age_gender <- T2_long |> 
+  mutate(
+    age_gender = str_c(age_group, gender, sep = " ")
+  ) |> 
+  group_by(age_gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_gender
+  )
+
+
+T2_age_gender1 <- T2_long |> 
+  mutate(
+    age_gender = str_c(age_group, gender, sep = " ")
+  ) |> 
+  group_by(age_gender, map,  name) |> 
+  summarize(
+   mean = mean(value, na.rm = TRUE),
+   sd = sd(value, na.rm = TRUE),
+   # range = str_c("(", round(mean - 2 * sd, 1), ", ", round(mean + 2 * sd, 1), ")"),
+   range = str_c(round(mean, 1), " \u00B1 ", round(2 * sd, 1)),
+   .groups = "drop"
+  ) |> 
+  pivot_wider(
+    id_cols = c(map, name),
+    values_from = range,
+    names_from = age_gender
+  )
+
+T2_age_gender |> 
+  filter(map == "T2") |> 
+  kable(align = "c")
+
+T2_age_gender1 |> 
+  filter(map == "T2") |> 
+  kable(align = "c")
 
 ```
+
+
+
 
 Three-way ANOVA test (@tbl-anova-t2) shows that age, gender and slice all have significant effects.
 
@@ -831,4 +837,5 @@ T2_sept |>
   )
   
 ```
+
 
