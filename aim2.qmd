@@ -80,7 +80,16 @@ icc_rc <- function(y1, y2, r = 3, r1 = 1){
   bias <- round(mean(diff, na.rm = TRUE), r1)
   RC <- round(1.96 * sd(diff, na.rm = TRUE), r1)
   
-  str_c(bias, "|", RC, "|", icc, "|", icc_p)
+  # CoV
+  
+  sds <- abs(diff) / sqrt(2)
+  means <- (y1 + y2) / 2
+  covs <- sds / means
+  
+  CoV <- str_c(round(mean(100 * covs, na.rm = TRUE), r1), "%")
+  
+  
+  str_c(bias, "|", RC, "|", CoV, "|", icc, "|", icc_p)
   
 }
 
@@ -169,8 +178,6 @@ T2_long <- T2tmp |>
 za <- qnorm(0.975)
 ```
 
-
-
 ## Repeatability for DL reconstructions
 
 <!-- use “intra-system” subjects for repeatability of sequence at same MR system for DL reconstructions for T1 Molli, T1 Smart1, T2, T2 fast (each n=15) -->
@@ -249,7 +256,7 @@ T1icc_seg <- T1intra |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -266,7 +273,7 @@ T1icc<- T1intra |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -308,7 +315,7 @@ T2icc_seg <- T2intra |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -326,7 +333,7 @@ T2icc <- T2intra |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -368,7 +375,6 @@ The bias, repeatability coefficient (RC), intraclass correlation coefficient (IC
 BAT1 / BAT2 + plot_layout(guides = "collect") & theme(legend.position = "top")
 ```
 
-
 ```{r}
 #| label: tbl-icc-repeat
 #| tbl-cap: Repeatability analysis of T1 and T2.
@@ -382,7 +388,6 @@ T1icc_seg |>
 T2icc_seg |> 
   kable(align = "c")
 ```
-
 
 ## Between-system reproducibility
 
@@ -469,7 +474,7 @@ T1icc_inter <- T1inter |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -485,7 +490,7 @@ T1icc_inter_seg <- T1inter |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -526,7 +531,7 @@ T2icc_inter <- T2inter |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -541,7 +546,7 @@ T2icc_inter_seg <- T2inter |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -583,7 +588,6 @@ The bias, reproducibility coefficient (RC), intraclass correlation coefficient (
 BAT1inter / BAT2inter + plot_layout(guides = "collect") & theme(legend.position = "top")
 ```
 
-
 ```{r}
 #| label: tbl-icc-rep-inter-sys
 #| tbl-cap:  Between-system reproducibility analysis of T1 and T2.
@@ -597,7 +601,6 @@ T1icc_inter_seg |>
 T2icc_inter_seg |> 
   kable(align = "c")
 ```
-
 
 ## Between-sequence reproducibility
 
@@ -728,7 +731,7 @@ allseq_icc <- allseq |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -744,7 +747,7 @@ allseq_icc_seg <- allseq |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -787,7 +790,6 @@ The bias, reproducibility coefficient (RC), intraclass correlation coefficient (
 BATseq + theme(legend.position = "top")
 ```
 
-
 ```{r}
 #| label: tbl-icc-rep-seq
 #| tbl-cap:  Between-sequence reproducibility analysis of T1 and T2.
@@ -798,8 +800,6 @@ allseq_icc_seg |>
 
 
 ```
-
-
 
 ## Between-recon reproducibility
 
@@ -1007,7 +1007,7 @@ allrecon_icc <- recon_all |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -1023,11 +1023,23 @@ allrecon_icc_seg <- recon_all |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
   )
+
+## check outliers ##
+# tmp <- recon_all |> 
+#   mutate(
+#     x = (A + B) / 2,
+#     y = (A - B)
+#   )
+# 
+# tmp |> 
+#   filter(
+#     y >= 200
+#   )
 
 # BA plot for recon
 BATrecon <- recon_all |> 
@@ -1056,7 +1068,6 @@ BATrecon <- recon_all |>
 
 The bias, reproducibility coefficient (RC), intraclass correlation coefficient (ICC) and 95% confidence interval comparing MOLLI: Std vs DL, T2: Std vs DL, and T2: DL vs GE are tabulated in @tbl-icc-rep-recon. Bland-Altman plots are shown in @fig-BA-rep-recon. (Non-inter-system: priority scan A $\to$ B; inter-system: priority scan B $\to$ A.) There is strong agreement within the three pairs of comparisons.
 
-
 ```{r}
 #| label: fig-BA-rep-recon
 #| fig-cap: Bland-Altman analysis of between-recon reproducibility for T1 and T2
@@ -1076,7 +1087,6 @@ allrecon_icc_seg  |>
 
 
 ```
-
 
 ## Between-reader reproducibility
 
@@ -1298,7 +1308,7 @@ all_reads_icc <- all_reads |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -1314,7 +1324,7 @@ all_reads_icc_seg <- all_reads |>
   separate_wider_delim(
     results,
     delim = "|",
-    names = c("Bias", "RC", "ICC (95% CI)", "P-value")
+    names = c("Bias", "RC", "CoV", "ICC (95% CI)", "P-value")
   ) |> 
   mutate(
     across(c("RC", "Bias"), parse_number)
@@ -1357,7 +1367,6 @@ The bias, reproducibility coefficient (RC), intraclass correlation coefficient (
 BATreads+ theme(legend.position = "top")
 ```
 
-
 ```{r}
 #| label: tbl-icc-rep-reads
 #| tbl-cap:  Between-reader (RVS vs AF) reproducibility analysis of MOLLI and T2.
@@ -1368,4 +1377,3 @@ all_reads_icc_seg  |>
 
 
 ```
-

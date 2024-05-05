@@ -211,7 +211,7 @@ T1_long <- T1tmp |>
       name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
     )
   ) |> 
-  select(id, age_group, gender, map, name, slice, value) 
+  select(id, age, age_group, gender, map, name, slice, value) 
 
 # View(T1_long)
 
@@ -344,7 +344,7 @@ T2_long <- T2tmp |>
       name %in% c(str_c("aha", 13:16), "sept_3_mean") ~ "Slice 3"
     )
   ) |> 
-  select(id, age_group, gender, map, name, slice, value) |> 
+  select(id, age, age_group, gender, map, name, slice, value) |> 
   filter(
     !is.na(map)
   )
@@ -479,6 +479,8 @@ T1_gender1_tab |>
   kable(align = "c")
 
 ```
+
+
 
 ```{r}
 #| label: tbl-ref-t1-age
@@ -837,5 +839,7 @@ T2_sept |>
   )
   
 ```
+
+
 
 
