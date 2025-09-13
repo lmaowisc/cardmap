@@ -1,2 +1,9 @@
 # Cardiac T1 and T2 Mapping at 1.5T: Nomograms and Evaluation of Deep Learning Reconstruction
 https://lmaowisc.github.io/cardmap/
+
+
+## Aim 1: Acquire age and gender specific reference ranges.
+Following SCMR recommendations, upper and lower range of normal will be defined by the mean plus and minus 2 standard deviations of the normal data, respectively.
+## Aim 2: Evaluate the performance of different relaxometry methods.
+To assess and quantify the test-retest repeatability within sequence, and between-system, between-sequence, and between-reconstruction reproducibility for T1 and T2 mapping as described in Aim 2 subgoals, three metrics (ICC, repeatability/reproducibility coefficient, bias) will be estimated for each pairwise comparison.
+
